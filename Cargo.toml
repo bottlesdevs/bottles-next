@@ -1,0 +1,8 @@
+[workspace.package]
+name = "bottles-next"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[workspace]
+members = ["next-cli", "next-core", "next-server", "next-winebridge"]
