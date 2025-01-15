@@ -10,6 +10,12 @@ check:
     cargo check --package bottles-server
     cargo check --package bottles-winebridge --target x86_64-pc-windows-gnu
 
+clippy:
+    cargo clippy --package bottles-cli
+    cargo clippy --package bottles-core
+    cargo clippy --package bottles-server
+    cargo clippy --package bottles-winebridge --target x86_64-pc-windows-gnu
+
 bridge prefix:
     cargo build --package bottles-winebridge --target x86_64-pc-windows-gnu
     cp target/x86_64-pc-windows-gnu/debug/bottles-winebridge.exe {{prefix}}
