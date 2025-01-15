@@ -4,6 +4,12 @@ build:
     cargo build --package bottles-server
     cargo build --package bottles-winebridge --target x86_64-pc-windows-gnu
 
+check:
+    cargo check --package bottles-cli
+    cargo check --package bottles-core
+    cargo check --package bottles-server
+    cargo check --package bottles-winebridge --target x86_64-pc-windows-gnu
+
 bridge prefix:
     cargo build --package bottles-winebridge --target x86_64-pc-windows-gnu
     cp target/x86_64-pc-windows-gnu/debug/bottles-winebridge.exe {{prefix}}
