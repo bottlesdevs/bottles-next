@@ -1,8 +1,29 @@
 [workspace.package]
-name = "bottles-next"
 version = "0.1.0"
+description = "Bottles Next is the evolution of Bottles"
+authors = ["Eduardo Flores <edfloreshz@proton.me"]
 edition = "2021"
-resolver = "2"
+license = "GPL-3.0"
+repository = "https://github.com/bottlesdevs/bottles-next"
+homepage = ""
+categories = [""]
+keywords = [""]
+exclude = [""]
+readme = "README.md"
 
 [workspace]
 members = ["next-cli", "next-core", "next-server", "next-winebridge"]
+resolver = "2"
+
+[workspace.dependencies]
+bottles-core = { git = "https://github.com/bottlesdevs/next-core" }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.134"
+thiserror = "2.0.9"
+tracing = "0.1.41"
+tonic = "0.12.3"
+tokio = { version = "1.28.2", features = ["full"] }
+prost = "0.13.4"
+
+[patch."https://github.com/bottlesdevs/next-core"]
+bottles-core = { path = "next-core" }
