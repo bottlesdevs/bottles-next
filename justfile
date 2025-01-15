@@ -1,8 +1,8 @@
-build:
-    cargo build --package bottles-cli
-    cargo build --package bottles-core
-    cargo build --package bottles-server
-    cargo build --package bottles-winebridge --target x86_64-pc-windows-gnu
+build *args:
+    cargo build {{args}} --package bottles-cli
+    cargo build {{args}} --package bottles-core
+    cargo build {{args}} --package bottles-server
+    cargo build {{args}} --package bottles-winebridge --target x86_64-pc-windows-gnu
 
 check:
     cargo check --package bottles-cli
