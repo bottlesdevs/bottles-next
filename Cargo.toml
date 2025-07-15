@@ -22,7 +22,7 @@ serde_json = "1.0.134"
 thiserror = "2.0.9"
 tracing = "0.1.41"
 tonic = "0.12.3"
-tokio = { version = "1.28.2", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 prost = "0.13.4"
 
 [patch."https://github.com/bottlesdevs/next-core"]
