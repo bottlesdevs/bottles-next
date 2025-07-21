@@ -26,3 +26,11 @@ cli *args:
 
 server:
     cargo run --package bottles-server
+
+update:
+    cd next-core && git pull origin main && cd ..
+    cd next-cli && git pull origin main && cd ..
+    cd next-docs && git pull origin main && cd ..
+    cd next-server && git pull origin main && cd ..
+    cd next-winebridge && git pull origin main && cd ..
+    git commit -am "chore: update submodules"
