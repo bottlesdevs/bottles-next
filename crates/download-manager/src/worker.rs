@@ -5,16 +5,14 @@ use tokio::{fs::File, io::AsyncWriteExt};
 
 pub(super) async fn download_thread(client: Client, mut request: Request) {
     request.mark_running();
-    match attempt_download(client.clone(), &mut request).await {
-        Ok(result) => {
-            request.mark_completed(result);
-            // TODO: Send the result to the user
-        }
-        Err(e) => {
-            request.mark_failed(e);
-            // TODO: Try to retry or fail
-        }
-    }
+
+    let _ = match attempt_download(client.clone(), &mut request).await {
+        Ok(result) => request.mark_completed(result),
+        Err(error) => match error {
+            DownloadError::Cancelled => request.mark_cancelled(),
+            _ => request.mark_failed(error),
+        },
+    };
 }
 
 async fn attempt_download(
@@ -35,6 +33,11 @@ async fn attempt_download(
 
     loop {
         tokio::select! {
+            _ = request.cancel_token.cancelled() => {
+                drop(file); // Manually drop the file handle to ensure that deletion doesn't fail
+                tokio::fs::remove_file(&request.destination()).await?;
+                return Err(DownloadError::Cancelled);
+            }
             chunk = response.chunk() => {
                 match chunk {
                     Ok(Some(chunk)) => {
