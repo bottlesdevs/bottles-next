@@ -1,12 +1,14 @@
-use crate::{Download, DownloadManager};
-use anyhow::Result;
+use crate::{Download, DownloadManager, download::Status};
+use anyhow::{Result, anyhow};
 use reqwest::Url;
 use std::path::{Path, PathBuf};
+use tokio::sync::watch;
 
-#[derive(Debug)]
 pub struct Request {
     url: Url,
     destination: PathBuf,
+
+    status: watch::Sender<Status>,
 }
 
 impl Request {
@@ -24,6 +26,25 @@ impl Request {
 
     pub fn destination(&self) -> &Path {
         self.destination.as_path()
+    }
+
+    pub fn mark_status(&self, status: Status) -> Result<()> {
+        self.status.send(status).map_err(|err| anyhow!(err))
+    }
+    pub fn mark_running(&self) -> Result<()> {
+        self.mark_status(Status::Running)
+    }
+
+    pub fn mark_failed(&self) -> Result<()> {
+        self.mark_status(Status::Failed)
+    }
+
+    pub fn mark_completed(&self) -> Result<()> {
+        self.mark_status(Status::Completed)
+    }
+
+    pub fn mark_retrying(&self, retry_count: usize) -> Result<()> {
+        self.mark_status(Status::Retrying(retry_count))
     }
 }
 
@@ -51,10 +72,15 @@ impl RequestBuilder<'_> {
             .destination
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
 
-        let request = Request { url, destination };
+        let (status_tx, status_rx) = watch::channel(Status::Queued);
+        let request = Request {
+            url,
+            destination,
+            status: status_tx,
+        };
 
         self.manager.queue_request(request)?;
 
-        Ok(Download::new())
+        Ok(Download::new(status_rx))
     }
 }

@@ -5,11 +5,14 @@ use reqwest::Client;
 use tokio::{fs::File, io::AsyncWriteExt};
 
 pub(super) async fn download_thread(client: Client, mut request: Request) {
+    request.mark_running();
     match attempt_download(client.clone(), &mut request).await {
         Ok(result) => {
+            request.mark_completed();
             // TODO: Send the result to the user
         }
         Err(e) => {
+            request.mark_failed();
             // TODO: Try to retry or fail
         }
     }
