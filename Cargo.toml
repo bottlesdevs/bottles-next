@@ -29,8 +29,10 @@ thiserror = "2.0.15"
 tracing = "0.1.41"
 tonic = "0.14"
 tokio = { version = "1.47", features = ["full"] }
+tokio-util = { version = "0.7", features = ["full"] }
 prost = "0.14"
 reqwest = { version = "0.12", features = ["stream"] }
 anyhow = "1.0.99"
 futures-core = "0.3"
 futures-util = "0.3"
+derive_builder = "0.20"
