@@ -1,15 +1,15 @@
 [submodule "next-server"]
-	path = next-server
+	path = crates/next-server
 	url = https://github.com/bottlesdevs/next-server
 [submodule "next-cli"]
-	path = next-cli
+	path = crates/next-cli
 	url = https://github.com/bottlesdevs/next-cli
 [submodule "next-winebridge"]
-	path = next-winebridge
+	path = crates/next-winebridge
 	url = https://github.com/bottlesdevs/next-winebridge
 [submodule "next-core"]
-	path = next-core
+	path = crates/next-core
 	url = https://github.com/bottlesdevs/next-core
 [submodule "next-docs"]
-	path = next-docs
+	path = crates/next-docs
 	url = https://github.com/bottlesdevs/next-docs
