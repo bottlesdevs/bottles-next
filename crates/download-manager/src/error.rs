@@ -7,8 +7,6 @@ pub enum DownloadError {
     Network(#[from] reqwest::Error),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Channel error: {0}")]
-    Channel(#[from] anyhow::Error),
     #[error("Download was cancelled")]
     Cancelled,
     #[error("Retry limit exceeded: {last_error}")]
