@@ -1,5 +1,5 @@
 use crate::{Download, DownloadError, DownloadManager, DownloadResult, Status};
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use reqwest::Url;
 use std::path::{Path, PathBuf};
 use tokio::sync::{oneshot, watch};
@@ -36,40 +36,35 @@ impl Request {
         self.cancel_token.is_cancelled()
     }
 
-    fn mark_status(&self, status: Status) -> Result<(), DownloadError> {
-        self.status
-            .send(status)
-            .map_err(|err| DownloadError::Channel(anyhow!(err)))
+    fn mark_status(&self, status: Status) -> Result<()> {
+        self.status.send(status).map_err(|err| anyhow!(err))
     }
 
-    fn send_result(
-        self,
-        result: Result<DownloadResult, DownloadError>,
-    ) -> Result<(), DownloadError> {
+    fn send_result(self, result: Result<DownloadResult, DownloadError>) -> Result<()> {
         self.result
             .send(result)
-            .map_err(|_| DownloadError::Channel(anyhow!("Failed to send download result")))
+            .map_err(|_| anyhow!("Failed to send download result"))
     }
 
-    pub fn mark_running(&self) -> Result<(), DownloadError> {
+    pub fn mark_running(&self) -> Result<()> {
         self.mark_status(Status::Running)
     }
 
-    pub fn mark_failed(self, error: DownloadError) -> Result<(), DownloadError> {
+    pub fn mark_failed(self, error: DownloadError) -> Result<()> {
         self.mark_status(Status::Failed)?;
         self.send_result(Err(error))
     }
 
-    pub fn mark_completed(self, result: DownloadResult) -> Result<(), DownloadError> {
+    pub fn mark_completed(self, result: DownloadResult) -> Result<()> {
         self.mark_status(Status::Completed)?;
         self.send_result(Ok(result))
     }
 
-    pub fn mark_retrying(&self, retry_count: usize) -> Result<(), DownloadError> {
+    pub fn mark_retrying(&self, retry_count: usize) -> Result<()> {
         self.mark_status(Status::Retrying(retry_count))
     }
 
-    pub fn mark_cancelled(self) -> Result<(), DownloadError> {
+    pub fn mark_cancelled(self) -> Result<()> {
         self.mark_status(Status::Cancelled)?;
         self.send_result(Err(DownloadError::Cancelled))
     }
@@ -93,7 +88,7 @@ impl RequestBuilder<'_> {
         self
     }
 
-    pub fn start(self) -> Result<Download, DownloadError> {
+    pub fn start(self) -> Result<Download> {
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
             .destination
