@@ -1,37 +1,42 @@
+mod context;
 mod download;
 mod error;
 mod request;
 mod worker;
 
+use crate::{context::Context, request::RequestBuilder, worker::download_thread};
 pub use crate::{
     download::{Download, DownloadResult, Status},
     error::DownloadError,
     request::Request,
 };
-use crate::{request::RequestBuilder, worker::download_thread};
-use reqwest::{Client, Url};
-use std::path::Path;
+use reqwest::Url;
+use std::{
+    path::Path,
+    sync::{Arc, atomic::Ordering},
+};
 use tokio::sync::mpsc;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 pub struct DownloadManager {
     queue: mpsc::Sender<Request>,
-    cancel_token: CancellationToken,
+    ctx: Arc<Context>,
     tracker: TaskTracker,
 }
 
 impl Default for DownloadManager {
     fn default() -> Self {
         let (tx, rx) = mpsc::channel(100);
-        let client = Client::new();
+        let ctx = Context::new(3);
         let tracker = TaskTracker::new();
+
         let manager = Self {
             queue: tx,
-            cancel_token: CancellationToken::new(),
+            ctx: ctx.clone(),
             tracker: tracker.clone(),
         };
 
-        tracker.spawn(dispatcher_thread(client, rx, tracker.clone()));
+        tracker.spawn(dispatcher_thread(ctx, rx, tracker.clone()));
         manager
     }
 }
@@ -66,20 +71,49 @@ impl DownloadManager {
     }
 
     pub fn cancel_all(&self) {
-        self.cancel_token.cancel();
+        self.ctx.cancel_all();
     }
 
     pub fn child_token(&self) -> CancellationToken {
-        self.cancel_token.child_token()
+        self.ctx.child_token()
     }
 }
 
-async fn dispatcher_thread(client: Client, mut rx: mpsc::Receiver<Request>, tracker: TaskTracker) {
-    while let Some(request) = rx.recv().await {
-        if request.is_cancelled() {
-            continue;
-        }
+async fn dispatcher_thread(
+    ctx: Arc<Context>,
+    mut rx: mpsc::Receiver<Request>,
+    tracker: TaskTracker,
+) {
+    struct ActiveGuard {
+        ctx: Arc<Context>,
+        _permit: tokio::sync::OwnedSemaphorePermit,
+    }
 
-        tracker.spawn(download_thread(client.clone(), request));
+    impl Drop for ActiveGuard {
+        fn drop(&mut self) {
+            self.ctx
+                .active
+                .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    while let Some(request) = rx.recv().await {
+        let guard = match ctx.semaphore.clone().acquire_owned().await {
+            Ok(p) => {
+                ctx.active.fetch_add(1, Ordering::Relaxed);
+                ActiveGuard {
+                    ctx: ctx.clone(),
+                    _permit: p,
+                }
+            }
+            Err(_) => break,
+        };
+        let client = ctx.client.clone();
+
+        tracker.spawn(async move {
+            // Move the guard into the worker thread so it's automatically released when the thread finishes
+            let _guard = guard;
+            download_thread(client, request).await
+        });
     }
 }
