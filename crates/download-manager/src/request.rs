@@ -3,6 +3,7 @@ use anyhow::anyhow;
 use reqwest::Url;
 use std::path::{Path, PathBuf};
 use tokio::sync::{oneshot, watch};
+use tokio_util::sync::CancellationToken;
 
 pub struct Request {
     url: Url,
@@ -10,6 +11,8 @@ pub struct Request {
 
     status: watch::Sender<Status>,
     result: oneshot::Sender<Result<DownloadResult, DownloadError>>,
+
+    pub cancel_token: CancellationToken,
 }
 
 impl Request {
@@ -27,6 +30,10 @@ impl Request {
 
     pub fn destination(&self) -> &Path {
         self.destination.as_path()
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancel_token.is_cancelled()
     }
 
     fn mark_status(&self, status: Status) -> Result<(), DownloadError> {
@@ -61,6 +68,11 @@ impl Request {
     pub fn mark_retrying(&self, retry_count: usize) -> Result<(), DownloadError> {
         self.mark_status(Status::Retrying(retry_count))
     }
+
+    pub fn mark_cancelled(self) -> Result<(), DownloadError> {
+        self.mark_status(Status::Cancelled)?;
+        self.send_result(Err(DownloadError::Cancelled))
+    }
 }
 
 pub struct RequestBuilder<'a> {
@@ -89,16 +101,18 @@ impl RequestBuilder<'_> {
 
         let (status_tx, status_rx) = watch::channel(Status::Queued);
         let (result_tx, result_rx) = oneshot::channel();
+        let cancel_token = self.manager.child_token();
 
         let request = Request {
             url,
             destination,
             status: status_tx,
             result: result_tx,
+            cancel_token: cancel_token.clone(),
         };
 
         self.manager.queue_request(request)?;
 
-        Ok(Download::new(status_rx, result_rx))
+        Ok(Download::new(status_rx, result_rx, cancel_token))
     }
 }

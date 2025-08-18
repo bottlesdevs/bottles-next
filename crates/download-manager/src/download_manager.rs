@@ -12,10 +12,11 @@ use crate::{
 use reqwest::{Client, Url};
 use std::path::Path;
 use tokio::sync::mpsc;
-use tokio_util::task::TaskTracker;
+use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 pub struct DownloadManager {
     queue: mpsc::Sender<Request>,
+    cancel_token: CancellationToken,
     tracker: TaskTracker,
 }
 
@@ -26,6 +27,7 @@ impl Default for DownloadManager {
         let tracker = TaskTracker::new();
         let manager = Self {
             queue: tx,
+            cancel_token: CancellationToken::new(),
             tracker: tracker.clone(),
         };
 
@@ -62,10 +64,22 @@ impl DownloadManager {
         // -1 because the dispatcher thread is always running
         self.tracker.len() - 1
     }
+
+    pub fn cancel_all(&self) {
+        self.cancel_token.cancel();
+    }
+
+    pub fn child_token(&self) -> CancellationToken {
+        self.cancel_token.child_token()
+    }
 }
 
 async fn dispatcher_thread(client: Client, mut rx: mpsc::Receiver<Request>, tracker: TaskTracker) {
     while let Some(request) = rx.recv().await {
+        if request.is_cancelled() {
+            continue;
+        }
+
         tracker.spawn(download_thread(client.clone(), request));
     }
 }
