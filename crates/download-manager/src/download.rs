@@ -1,14 +1,18 @@
+use crate::DownloadError;
 use std::path::PathBuf;
-
-use tokio::sync::watch;
+use tokio::sync::{oneshot, watch};
 
 pub struct Download {
     status: watch::Receiver<Status>,
+    result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 }
 
 impl Download {
-    pub fn new(status: watch::Receiver<Status>) -> Self {
-        Download { status }
+    pub fn new(
+        status: watch::Receiver<Status>,
+        result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
+    ) -> Self {
+        Download { status, result }
     }
 }
 
