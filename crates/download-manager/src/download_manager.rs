@@ -26,26 +26,28 @@ pub struct DownloadManager {
 
 impl Default for DownloadManager {
     fn default() -> Self {
-        let (tx, rx) = mpsc::channel(100);
-        let ctx = Context::new(3);
-        let tracker = TaskTracker::new();
-
-        let manager = Self {
-            queue: tx,
-            ctx: ctx.clone(),
-            tracker: tracker.clone(),
-        };
-
-        tracker.spawn(dispatcher_thread(ctx, rx, tracker.clone()));
-        manager
+        DownloadManager::builder()
+            .max_concurrent(3)
+            .queue_size(100)
+            .build()
+            .unwrap()
     }
 }
 
 impl DownloadManager {
-    pub fn download_builder(&self, url: Url, destination: impl AsRef<Path>) -> RequestBuilder {
-        let destination = destination.as_ref().to_path_buf();
+    pub fn builder() -> DownloadManagerBuilder {
+        DownloadManagerBuilder::new()
+    }
 
-        Request::builder(self).url(url).destination(destination)
+    pub fn download(&self, url: Url, destination: impl AsRef<Path>) -> anyhow::Result<Download> {
+        self.download_builder()
+            .url(url)
+            .destination(destination)
+            .start()
+    }
+
+    pub fn download_builder(&self) -> RequestBuilder {
+        Request::builder(self)
     }
 
     fn queue_request(&self, request: Request) -> Result<(), DownloadError> {
@@ -76,6 +78,54 @@ impl DownloadManager {
 
     pub fn child_token(&self) -> CancellationToken {
         self.ctx.child_token()
+    }
+}
+
+pub struct DownloadManagerBuilder {
+    max_concurrent: Option<usize>,
+    queue_size: Option<usize>,
+}
+
+impl DownloadManagerBuilder {
+    pub fn new() -> Self {
+        Self {
+            max_concurrent: None,
+            queue_size: None,
+        }
+    }
+
+    pub fn max_concurrent(mut self, max: usize) -> Self {
+        self.max_concurrent = Some(max);
+        self
+    }
+
+    pub fn queue_size(mut self, size: usize) -> Self {
+        self.queue_size = Some(size);
+        self
+    }
+
+    pub fn build(self) -> anyhow::Result<DownloadManager> {
+        let max_concurrent = self.max_concurrent.filter(|&n| n > 0).ok_or_else(|| {
+            anyhow::anyhow!("Max concurrent downloads must be set and greater than 0")
+        })?;
+        let queue_size = self
+            .queue_size
+            .filter(|&n| n > 0)
+            .ok_or_else(|| anyhow::anyhow!("Queue size must be set and greater than 0"))?;
+
+        let (tx, rx) = mpsc::channel(queue_size);
+        let ctx = Context::new(max_concurrent);
+        let tracker = TaskTracker::new();
+
+        let manager = DownloadManager {
+            queue: tx,
+            ctx: ctx.clone(),
+            tracker: tracker.clone(),
+        };
+
+        tracker.spawn(dispatcher_thread(ctx, rx, tracker.clone()));
+
+        Ok(manager)
     }
 }
 
