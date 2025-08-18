@@ -3,10 +3,15 @@ name = "download-manager"
 version = "0.1.0"
 edition.workspace = true
 
+[lib]
+path = "src/download_manager.rs"
+
 [dependencies]
 reqwest = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 futures-core = { workspace = true }
 futures-util = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+derive_builder = { workspace = true }
