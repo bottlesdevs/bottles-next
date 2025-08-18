@@ -60,6 +60,13 @@ async fn attempt_download(
     if let Some(parent) = request.destination().parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
+
+    if request.destination().exists() && !request.config().overwrite() {
+        return Err(DownloadError::FileExists {
+            path: request.destination().to_path_buf(),
+        });
+    }
+
     let mut file = File::create(&request.destination()).await?;
 
     loop {

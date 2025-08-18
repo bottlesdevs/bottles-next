@@ -20,9 +20,12 @@ pub struct Request {
 #[derive(Debug, Builder)]
 #[builder(pattern = "owned")]
 pub struct DownloadConfig {
+    #[builder(default = "3")]
     retries: u32,
     #[builder(default, setter(strip_option))]
     user_agent: Option<String>,
+    #[builder(default = "false")]
+    overwrite: bool,
 }
 
 impl Default for DownloadConfig {
@@ -30,6 +33,7 @@ impl Default for DownloadConfig {
         DownloadConfig {
             retries: 3,
             user_agent: None,
+            overwrite: false,
         }
     }
 }
@@ -41,6 +45,10 @@ impl DownloadConfig {
 
     pub fn user_agent(&self) -> Option<&str> {
         self.user_agent.as_deref()
+    }
+
+    pub fn overwrite(&self) -> bool {
+        self.overwrite
     }
 }
 
@@ -139,12 +147,17 @@ impl RequestBuilder<'_> {
         self
     }
 
+    pub fn overwrite(mut self, overwrite: bool) -> Self {
+        self.config = self.config.overwrite(overwrite);
+        self
+    }
+
     pub fn start(self) -> Result<Download> {
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
             .destination
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
-        let config = self.config.build().unwrap_or_default();
+        let config = self.config.build()?;
 
         let (status_tx, status_rx) = watch::channel(Status::Queued);
         let (result_tx, result_rx) = oneshot::channel();
