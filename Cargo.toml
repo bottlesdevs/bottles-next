@@ -12,7 +12,13 @@ exclude = [""]
 readme = "README.md"
 
 [workspace]
-members = ["next-cli", "next-core", "next-server", "next-winebridge"]
+members = [
+    "crates/next-cli",
+    "crates/next-core",
+    "crates/next-server",
+    "crates/next-winebridge",
+]
+default-members = ["crates/next-core"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -26,4 +32,4 @@ tokio = { version = "1.43.1", features = ["full"] }
 prost = "0.13.4"
 
 [patch."https://github.com/bottlesdevs/next-core"]
-bottles-core = { path = "next-core" }
+bottles-core = { path = "crates/next-core" }
