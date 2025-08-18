@@ -1,4 +1,4 @@
-use crate::{DownloadManager, download::Download};
+use crate::{Download, DownloadManager};
 use anyhow::Result;
 use reqwest::Url;
 use std::path::{Path, PathBuf};

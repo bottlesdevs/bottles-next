@@ -1,10 +1,13 @@
 mod download;
 mod error;
 mod request;
+mod worker;
 
 use crate::{
+    download::{Download, DownloadResult},
     error::DownloadError,
     request::{Request, RequestBuilder},
+    worker::download_thread,
 };
 use reqwest::{Client, Url};
 use std::path::Path;
@@ -62,7 +65,7 @@ impl DownloadManager {
 }
 
 async fn dispatcher_thread(client: Client, mut rx: mpsc::Receiver<Request>, tracker: TaskTracker) {
-    while let Some(_) = rx.recv().await {
-        tracker.spawn(async move {});
+    while let Some(request) = rx.recv().await {
+        tracker.spawn(download_thread(client.clone(), request));
     }
 }
