@@ -1,6 +1,5 @@
 use super::Request;
-use crate::DownloadResult;
-use anyhow::{Result, anyhow};
+use crate::{DownloadError, DownloadResult};
 use reqwest::Client;
 use tokio::{fs::File, io::AsyncWriteExt};
 
@@ -8,17 +7,20 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
     request.mark_running();
     match attempt_download(client.clone(), &mut request).await {
         Ok(result) => {
-            request.mark_completed();
+            request.mark_completed(result);
             // TODO: Send the result to the user
         }
         Err(e) => {
-            request.mark_failed();
+            request.mark_failed(e);
             // TODO: Try to retry or fail
         }
     }
 }
 
-async fn attempt_download(client: Client, request: &mut Request) -> Result<DownloadResult> {
+async fn attempt_download(
+    client: Client,
+    request: &mut Request,
+) -> Result<DownloadResult, DownloadError> {
     let mut response = client
         .get(request.url().as_ref())
         .send()
@@ -42,7 +44,7 @@ async fn attempt_download(client: Client, request: &mut Request) -> Result<Downl
                     Err(e) => {
                         drop(file); // Manually drop the file handle to ensure that deletion doesn't fail
                         tokio::fs::remove_file(&request.destination()).await?;
-                        return Err(anyhow!(e));
+                        return Err(e.into());
                     },
                 }
             }

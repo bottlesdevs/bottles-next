@@ -4,7 +4,7 @@ mod request;
 mod worker;
 
 use crate::{
-    download::{Download, DownloadResult},
+    download::{Download, DownloadResult, Status},
     error::DownloadError,
     request::{Request, RequestBuilder},
     worker::download_thread,
