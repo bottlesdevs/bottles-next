@@ -2,7 +2,7 @@
 version = "0.1.0"
 description = "Bottles Next is the evolution of Bottles"
 authors = ["Eduardo Flores <edfloreshz@proton.me"]
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0"
 repository = "https://github.com/bottlesdevs/bottles-next"
 homepage = ""
@@ -18,18 +18,17 @@ members = [
     "crates/next-server",
     "crates/next-winebridge",
 ]
-default-members = ["crates/next-core"]
 resolver = "2"
 
 [workspace.dependencies]
-bottles-core = { git = "https://github.com/bottlesdevs/next-core" }
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.134"
-thiserror = "2.0.9"
-tracing = "0.1.41"
-tonic = "0.12.3"
-tokio = { version = "1.43.1", features = ["full"] }
-prost = "0.13.4"
-
-[patch."https://github.com/bottlesdevs/next-core"]
 bottles-core = { path = "crates/next-core" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.142"
+thiserror = "2.0.15"
+tracing = "0.1.41"
+tonic = "0.14"
+tokio = { version = "1.47", features = ["full"] }
+prost = "0.14"
+reqwest = { version = "0.12", features = ["stream"] }
+anyhow = "1.0.99"
+futures-core = "0.3"
