@@ -3,12 +3,12 @@ mod error;
 mod request;
 mod worker;
 
-use crate::{
+pub use crate::{
     download::{Download, DownloadResult, Status},
     error::DownloadError,
-    request::{Request, RequestBuilder},
-    worker::download_thread,
+    request::Request,
 };
+use crate::{request::RequestBuilder, worker::download_thread};
 use reqwest::{Client, Url};
 use std::path::Path;
 use tokio::sync::mpsc;
