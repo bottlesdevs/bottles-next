@@ -54,6 +54,9 @@ impl Request {
         }
     }
 
+    /* TODO:
+     * Add callbacks like `on_update`, `on_progress`, `on_complete`, etc.
+     */
     pub fn url(&self) -> &Url {
         &self.url
     }
