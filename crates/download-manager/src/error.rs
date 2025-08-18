@@ -20,3 +20,21 @@ pub enum DownloadError {
     #[error("Invalid URL: {0}")]
     InvalidUrl(String),
 }
+
+impl DownloadError {
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            Self::Network(network_err) => {
+                network_err.is_timeout()
+                    || network_err.is_connect()
+                    || network_err.is_request()
+                    || network_err
+                        .status()
+                        .map(|status_code| status_code.is_server_error())
+                        .unwrap_or(true)
+            }
+            Self::Cancelled | Self::Io(_) => false,
+            _ => false,
+        }
+    }
+}

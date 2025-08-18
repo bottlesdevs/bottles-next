@@ -31,7 +31,7 @@ impl Download {
 pub enum Status {
     Queued,
     Running,
-    Retrying(usize),
+    Retrying(u32),
     Completed,
     Cancelled,
     Failed,

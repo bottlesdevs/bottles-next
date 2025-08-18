@@ -1,18 +1,49 @@
-use super::Request;
-use crate::{DownloadError, DownloadResult};
+use crate::{DownloadError, DownloadResult, Request};
+use anyhow::anyhow;
 use reqwest::Client;
+use std::time::Duration;
 use tokio::{fs::File, io::AsyncWriteExt};
 
 pub(super) async fn download_thread(client: Client, mut request: Request) {
     request.mark_running();
+    let mut last_retryable_error: Option<anyhow::Error> = None;
 
-    let _ = match attempt_download(client.clone(), &mut request).await {
-        Ok(result) => request.mark_completed(result),
-        Err(error) => match error {
-            DownloadError::Cancelled => request.mark_cancelled(),
-            _ => request.mark_failed(error),
-        },
-    };
+    let retries = request.config().retries();
+    for attempt in 0..=retries {
+        if attempt > 0 {
+            request.mark_retrying(attempt);
+
+            //TODO: Add proper backoff
+            let mut delay = tokio::time::interval(Duration::from_secs(1));
+
+            tokio::select! {
+                _ = delay.tick() => {},
+                _ = request.cancel_token.cancelled() => {
+                    request.mark_cancelled();
+                    return;
+                }
+            }
+        }
+
+        match attempt_download(client.clone(), &mut request).await {
+            Ok(result) => {
+                request.mark_completed(result);
+                return;
+            }
+            Err(error) if error.is_retryable() => {
+                last_retryable_error = Some(error.into());
+                continue;
+            }
+            Err(error) => {
+                request.mark_failed(error);
+                return;
+            }
+        };
+    }
+
+    request.mark_failed(DownloadError::RetriesExhausted {
+        last_error: last_retryable_error.unwrap_or_else(|| anyhow!("Unknwown Error")),
+    });
 }
 
 async fn attempt_download(
