@@ -1,12 +1,11 @@
-use crate::{DownloadError, DownloadID};
-use anyhow::anyhow;
+use crate::{DownloadError, DownloadEvent, DownloadID};
 use std::path::PathBuf;
-use tokio::sync::{oneshot, watch};
+use tokio::sync::{broadcast, oneshot};
 use tokio_util::sync::CancellationToken;
 
 pub struct Download {
     id: DownloadID,
-    status: watch::Receiver<Status>,
+    events: broadcast::Receiver<DownloadEvent>,
     result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 
     cancel_token: CancellationToken,
@@ -15,13 +14,13 @@ pub struct Download {
 impl Download {
     pub fn new(
         id: DownloadID,
-        status: watch::Receiver<Status>,
+        events: broadcast::Receiver<DownloadEvent>,
         result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
         cancel_token: CancellationToken,
     ) -> Self {
         Download {
             id,
-            status,
+            events,
             result,
             cancel_token,
         }
@@ -33,10 +32,6 @@ impl Download {
 
     pub fn cancel(&self) {
         self.cancel_token.cancel();
-    }
-
-    pub fn status(&self) -> Status {
-        *self.status.borrow()
     }
 }
 
@@ -58,17 +53,8 @@ impl std::future::Future for Download {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Queued,
-    Running,
-    Retrying(u32),
-    Completed,
-    Cancelled,
-    Failed,
-}
-
 #[derive(Debug)]
 pub struct DownloadResult {
     pub path: PathBuf,
+    pub bytes_downloaded: u64,
 }

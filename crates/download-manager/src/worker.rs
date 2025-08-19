@@ -21,23 +21,21 @@ const BACKOFF_STRATEGY: ExponentialBackoff = ExponentialBackoff {
 };
 
 pub(super) async fn download_thread(client: Client, mut request: Request) {
-    request.mark_running();
+    request.start();
     let mut last_retryable_error: DownloadError =
         DownloadError::Unknown("Unknown Error".to_string());
 
     let retries = request.config().retries();
     for attempt in 0..=retries {
         if attempt > 0 {
-            request.mark_retrying(attempt);
-
-            //TODO: Add proper backoff
             let delay = BACKOFF_STRATEGY.next_delay(attempt);
             let mut interval = tokio::time::interval(delay);
 
+            request.retry(attempt, delay);
             tokio::select! {
                 _ = interval.tick() => {},
                 _ = request.cancel_token.cancelled() => {
-                    request.mark_cancelled();
+                    request.cancel();
                     return;
                 }
             }
@@ -45,7 +43,7 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
 
         match attempt_download(client.clone(), &mut request).await {
             Ok(result) => {
-                request.mark_completed(result);
+                request.finish(result);
                 return;
             }
             Err(error) if error.is_retryable() => {
@@ -53,13 +51,13 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
                 continue;
             }
             Err(error) => {
-                request.mark_failed(error);
+                request.fail(error);
                 return;
             }
         };
     }
 
-    request.mark_failed(DownloadError::RetriesExhausted {
+    request.fail(DownloadError::RetriesExhausted {
         last_error: Box::new(last_retryable_error),
     });
 }
@@ -86,7 +84,7 @@ async fn attempt_download(
     }
 
     let mut file = File::create(&request.destination()).await?;
-
+    let mut bytes_downloaded = 0;
     loop {
         tokio::select! {
             _ = request.cancel_token.cancelled() => {
@@ -98,6 +96,7 @@ async fn attempt_download(
                 match chunk {
                     Ok(Some(chunk)) => {
                         file.write_all(&chunk).await?;
+                        bytes_downloaded += chunk.len() as u64;
                     }
                     Ok(None) => break,
                     Err(e) => {
@@ -115,5 +114,6 @@ async fn attempt_download(
 
     Ok(DownloadResult {
         path: request.destination().to_path_buf(),
+        bytes_downloaded,
     })
 }
