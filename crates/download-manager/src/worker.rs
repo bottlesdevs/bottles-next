@@ -1,5 +1,4 @@
 use crate::{DownloadError, DownloadResult, Request};
-use anyhow::anyhow;
 use reqwest::Client;
 use std::time::Duration;
 use tokio::{fs::File, io::AsyncWriteExt};
@@ -23,7 +22,8 @@ const BACKOFF_STRATEGY: ExponentialBackoff = ExponentialBackoff {
 
 pub(super) async fn download_thread(client: Client, mut request: Request) {
     request.mark_running();
-    let mut last_retryable_error: Option<anyhow::Error> = None;
+    let mut last_retryable_error: DownloadError =
+        DownloadError::Unknown("Unknown Error".to_string());
 
     let retries = request.config().retries();
     for attempt in 0..=retries {
@@ -49,7 +49,7 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
                 return;
             }
             Err(error) if error.is_retryable() => {
-                last_retryable_error = Some(error.into());
+                last_retryable_error = error;
                 continue;
             }
             Err(error) => {
@@ -60,7 +60,7 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
     }
 
     request.mark_failed(DownloadError::RetriesExhausted {
-        last_error: last_retryable_error.unwrap_or_else(|| anyhow!("Unknwown Error")),
+        last_error: Box::new(last_retryable_error),
     });
 }
 
