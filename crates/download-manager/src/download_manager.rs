@@ -67,10 +67,8 @@ impl DownloadManager {
         self.queue.max_capacity() - self.queue.capacity()
     }
 
-    /// Consider replacing with an explicit atomic counter.
     pub fn active_downloads(&self) -> usize {
-        // -1 because the dispatcher thread is always running
-        self.tracker.len() - 1
+        self.ctx.active.load(Ordering::Relaxed)
     }
 
     pub fn cancel_all(&self) {
