@@ -1,5 +1,5 @@
 use crate::{DownloadError, DownloadID};
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use std::path::PathBuf;
 use tokio::sync::{oneshot, watch};
 use tokio_util::sync::CancellationToken;
@@ -41,7 +41,7 @@ impl Download {
 }
 
 impl std::future::Future for Download {
-    type Output = Result<DownloadResult>;
+    type Output = Result<DownloadResult, DownloadError>;
 
     fn poll(
         mut self: std::pin::Pin<&mut Self>,
@@ -51,8 +51,8 @@ impl std::future::Future for Download {
         use std::task::Poll;
 
         match Pin::new(&mut self.result).poll(cx) {
-            Poll::Ready(Ok(result)) => Poll::Ready(result.map_err(|err| anyhow!(err))),
-            Poll::Ready(Err(e)) => Poll::Ready(Err(anyhow!(e))),
+            Poll::Ready(Ok(result)) => Poll::Ready(result),
+            Poll::Ready(Err(_)) => Poll::Ready(Err(DownloadError::ManagerShutdown)),
             Poll::Pending => Poll::Pending,
         }
     }
