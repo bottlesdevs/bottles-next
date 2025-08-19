@@ -400,6 +400,7 @@ dependencies = [
  "reqwest",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tokio-util",
 ]
 
@@ -1700,6 +1701,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
