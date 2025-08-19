@@ -1,8 +1,11 @@
-use crate::{Download, DownloadError, DownloadID, DownloadManager, DownloadResult, Status};
+use crate::{Download, DownloadError, DownloadEvent, DownloadID, DownloadManager, DownloadResult};
 use derive_builder::Builder;
 use reqwest::Url;
-use std::path::{Path, PathBuf};
-use tokio::sync::{oneshot, watch};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
+use tokio::sync::{broadcast, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 pub struct Request {
@@ -11,7 +14,7 @@ pub struct Request {
     destination: PathBuf,
     config: DownloadConfig,
 
-    status: watch::Sender<Status>,
+    events: broadcast::Sender<DownloadEvent>,
     result: oneshot::Sender<Result<DownloadResult, DownloadError>>,
 
     pub cancel_token: CancellationToken,
@@ -62,6 +65,10 @@ impl Request {
         }
     }
 
+    pub fn id(&self) -> DownloadID {
+        self.id
+    }
+
     /* TODO:
      * Add callbacks like `on_update`, `on_progress`, `on_complete`, etc.
      */
@@ -81,9 +88,9 @@ impl Request {
         self.cancel_token.is_cancelled()
     }
 
-    fn mark_status(&self, status: Status) {
+    fn emit(&self, event: DownloadEvent) {
         // TODO: Log the error
-        let _ = self.status.send(status);
+        let _ = self.events.send(event);
     }
 
     fn send_result(self, result: Result<DownloadResult, DownloadError>) {
@@ -91,29 +98,38 @@ impl Request {
         let _ = self.result.send(result);
     }
 
-    pub fn mark_running(&self) {
-        self.mark_status(Status::Running)
+    pub fn start(&self) {
+        self.emit(DownloadEvent::Started {
+            id: self.id(),
+            url: self.url().clone(),
+            destination: self.destination.clone(),
+            total_bytes: None,
+        });
     }
 
-    pub fn mark_failed(self, error: DownloadError) {
-        match error {
-            DownloadError::Cancelled => self.mark_status(Status::Cancelled),
-            _ => self.mark_status(Status::Failed),
-        }
+    pub fn fail(self, error: DownloadError) {
         self.send_result(Err(error));
     }
 
-    pub fn mark_completed(self, result: DownloadResult) {
-        self.mark_status(Status::Completed);
+    pub fn finish(self, result: DownloadResult) {
+        self.emit(DownloadEvent::Completed {
+            id: self.id(),
+            path: result.path.clone(),
+            bytes_downloaded: result.bytes_downloaded,
+        });
         self.send_result(Ok(result))
     }
 
-    pub fn mark_retrying(&self, retry_count: u32) {
-        self.mark_status(Status::Retrying(retry_count))
+    pub fn retry(&self, attempt: u32, delay: Duration) {
+        self.emit(DownloadEvent::Retrying {
+            id: self.id(),
+            attempt,
+            next_delay_ms: delay.as_millis() as u64,
+        });
     }
 
-    pub fn mark_cancelled(self) {
-        self.mark_status(Status::Cancelled);
+    pub fn cancel(self) {
+        self.emit(DownloadEvent::Cancelled { id: self.id() });
         self.send_result(Err(DownloadError::Cancelled))
     }
 }
@@ -159,23 +175,24 @@ impl RequestBuilder<'_> {
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
         let config = self.config.build()?;
 
-        let (status_tx, status_rx) = watch::channel(Status::Queued);
         let (result_tx, result_rx) = oneshot::channel();
         let cancel_token = self.manager.child_token();
 
+        let event_tx = self.manager.ctx.events.clone();
+        let event_rx = event_tx.subscribe();
         let id = self.manager.ctx.next_id();
         let request = Request {
             id,
             url,
             destination,
             config,
-            status: status_tx,
+            events: event_tx,
             result: result_tx,
             cancel_token: cancel_token.clone(),
         };
 
         self.manager.queue_request(request)?;
 
-        Ok(Download::new(id, status_rx, result_rx, cancel_token))
+        Ok(Download::new(id, event_rx, result_rx, cancel_token))
     }
 }

@@ -1,14 +1,16 @@
 mod context;
 mod download;
 mod error;
+mod events;
 mod request;
 mod worker;
 
 use crate::{context::Context, request::RequestBuilder, worker::download_thread};
 pub use crate::{
     context::DownloadID,
-    download::{Download, DownloadResult, Status},
+    download::{Download, DownloadResult},
     error::DownloadError,
+    events::{DownloadEvent, Progress},
     request::Request,
 };
 use reqwest::Url;
