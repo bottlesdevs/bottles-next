@@ -4,6 +4,23 @@ use reqwest::Client;
 use std::time::Duration;
 use tokio::{fs::File, io::AsyncWriteExt};
 
+pub struct ExponentialBackoff {
+    pub base_delay: Duration,
+    pub max_delay: Duration,
+}
+
+impl ExponentialBackoff {
+    pub fn next_delay(&self, attempt: u32) -> Duration {
+        let delay = self.base_delay * (2u32.pow(attempt));
+        delay.min(self.max_delay)
+    }
+}
+
+const BACKOFF_STRATEGY: ExponentialBackoff = ExponentialBackoff {
+    base_delay: Duration::from_secs(1),
+    max_delay: Duration::from_secs(10),
+};
+
 pub(super) async fn download_thread(client: Client, mut request: Request) {
     request.mark_running();
     let mut last_retryable_error: Option<anyhow::Error> = None;
@@ -14,10 +31,11 @@ pub(super) async fn download_thread(client: Client, mut request: Request) {
             request.mark_retrying(attempt);
 
             //TODO: Add proper backoff
-            let mut delay = tokio::time::interval(Duration::from_secs(1));
+            let delay = BACKOFF_STRATEGY.next_delay(attempt);
+            let mut interval = tokio::time::interval(delay);
 
             tokio::select! {
-                _ = delay.tick() => {},
+                _ = interval.tick() => {},
                 _ = request.cancel_token.cancelled() => {
                     request.mark_cancelled();
                     return;
