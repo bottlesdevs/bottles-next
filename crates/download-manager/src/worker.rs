@@ -1,4 +1,4 @@
-use crate::{DownloadError, DownloadResult, Request};
+use crate::{DownloadError, DownloadResult, Progress, Request};
 use reqwest::Client;
 use std::time::Duration;
 use tokio::{fs::File, io::AsyncWriteExt};
@@ -84,7 +84,7 @@ async fn attempt_download(
     }
 
     let mut file = File::create(&request.destination()).await?;
-    let mut bytes_downloaded = 0;
+    let mut progress = Progress::new(response.content_length());
     loop {
         tokio::select! {
             _ = request.cancel_token.cancelled() => {
@@ -96,7 +96,9 @@ async fn attempt_download(
                 match chunk {
                     Ok(Some(chunk)) => {
                         file.write_all(&chunk).await?;
-                        bytes_downloaded += chunk.len() as u64;
+                        if progress.update(chunk.len() as u64) {
+                            request.update_progress(progress);
+                        }
                     }
                     Ok(None) => break,
                     Err(e) => {
@@ -108,12 +110,14 @@ async fn attempt_download(
             }
         }
     }
+    progress.force_update();
+    request.update_progress(progress);
 
     // Ensure the data is written to disk
     file.sync_all().await?;
 
     Ok(DownloadResult {
         path: request.destination().to_path_buf(),
-        bytes_downloaded,
+        bytes_downloaded: progress.bytes_downloaded(),
     })
 }
