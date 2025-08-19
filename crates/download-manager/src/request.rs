@@ -1,4 +1,4 @@
-use crate::{Download, DownloadError, DownloadManager, DownloadResult, Status};
+use crate::{Download, DownloadError, DownloadID, DownloadManager, DownloadResult, Status};
 use anyhow::{Result, anyhow};
 use derive_builder::Builder;
 use reqwest::Url;
@@ -7,6 +7,7 @@ use tokio::sync::{oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 pub struct Request {
+    id: DownloadID,
     url: Url,
     destination: PathBuf,
     config: DownloadConfig,
@@ -163,7 +164,9 @@ impl RequestBuilder<'_> {
         let (result_tx, result_rx) = oneshot::channel();
         let cancel_token = self.manager.child_token();
 
+        let id = self.manager.ctx.next_id();
         let request = Request {
+            id,
             url,
             destination,
             config,
@@ -174,6 +177,6 @@ impl RequestBuilder<'_> {
 
         self.manager.queue_request(request)?;
 
-        Ok(Download::new(status_rx, result_rx, cancel_token))
+        Ok(Download::new(id, status_rx, result_rx, cancel_token))
     }
 }
