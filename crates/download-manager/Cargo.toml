@@ -9,6 +9,7 @@ path = "src/download_manager.rs"
 [dependencies]
 reqwest = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 tokio-util = { workspace = true }
 futures-core = { workspace = true }
 futures-util = { workspace = true }

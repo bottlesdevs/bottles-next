@@ -13,12 +13,14 @@ pub use crate::{
     events::{DownloadEvent, Progress},
     request::Request,
 };
+use futures_core::Stream;
 use reqwest::Url;
 use std::{
     path::Path,
     sync::{Arc, atomic::Ordering},
 };
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
+use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 pub struct DownloadManager {
@@ -79,6 +81,16 @@ impl DownloadManager {
 
     pub fn child_token(&self) -> CancellationToken {
         self.ctx.child_token()
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<DownloadEvent> {
+        self.ctx.events.subscribe()
+    }
+
+    pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {
+        use tokio_stream::StreamExt as _;
+
+        BroadcastStream::new(self.subscribe()).filter_map(|res| res.ok())
     }
 }
 

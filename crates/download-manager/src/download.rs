@@ -1,6 +1,8 @@
 use crate::{DownloadError, DownloadEvent, DownloadID};
+use futures_core::Stream;
 use std::path::PathBuf;
 use tokio::sync::{broadcast, oneshot};
+use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::sync::CancellationToken;
 
 pub struct Download {
@@ -32,6 +34,26 @@ impl Download {
 
     pub fn cancel(&self) {
         self.cancel_token.cancel();
+    }
+
+    pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {
+        use tokio_stream::StreamExt as _;
+
+        let download_id = self.id;
+        BroadcastStream::new(self.events.resubscribe())
+            .filter_map(|res| res.ok())
+            .filter(move |event| {
+                let matches = match event {
+                    DownloadEvent::Queued { id, .. }
+                    | DownloadEvent::Started { id, .. }
+                    | DownloadEvent::Retrying { id, .. }
+                    | DownloadEvent::Completed { id, .. }
+                    | DownloadEvent::Failed { id, .. }
+                    | DownloadEvent::Cancelled { id, .. } => *id == download_id,
+                };
+
+                matches
+            })
     }
 }
 
