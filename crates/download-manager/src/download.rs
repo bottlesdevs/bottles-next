@@ -1,12 +1,13 @@
-use crate::{DownloadError, DownloadEvent, DownloadID};
+use crate::{DownloadError, DownloadEvent, DownloadID, Progress};
 use futures_core::Stream;
 use std::path::PathBuf;
-use tokio::sync::{broadcast, oneshot};
-use tokio_stream::wrappers::BroadcastStream;
+use tokio::sync::{broadcast, oneshot, watch};
+use tokio_stream::wrappers::{BroadcastStream, WatchStream};
 use tokio_util::sync::CancellationToken;
 
 pub struct Download {
     id: DownloadID,
+    progress: watch::Receiver<Progress>,
     events: broadcast::Receiver<DownloadEvent>,
     result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 
@@ -16,12 +17,14 @@ pub struct Download {
 impl Download {
     pub fn new(
         id: DownloadID,
+        progress: watch::Receiver<Progress>,
         events: broadcast::Receiver<DownloadEvent>,
         result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
         cancel_token: CancellationToken,
     ) -> Self {
         Download {
             id,
+            progress,
             events,
             result,
             cancel_token,
@@ -34,6 +37,14 @@ impl Download {
 
     pub fn cancel(&self) {
         self.cancel_token.cancel();
+    }
+
+    pub fn progress_raw(&self) -> watch::Receiver<Progress> {
+        self.progress.clone()
+    }
+
+    pub fn progress(&self) -> impl Stream<Item = Progress> + 'static {
+        WatchStream::new(self.progress_raw())
     }
 
     pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {

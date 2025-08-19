@@ -1,4 +1,6 @@
-use crate::{Download, DownloadError, DownloadEvent, DownloadID, DownloadManager, DownloadResult};
+use crate::{
+    Download, DownloadError, DownloadEvent, DownloadID, DownloadManager, DownloadResult, Progress,
+};
 use derive_builder::Builder;
 use reqwest::Url;
 use std::{
@@ -14,6 +16,7 @@ pub struct Request {
     destination: PathBuf,
     config: DownloadConfig,
 
+    progress: watch::Sender<Progress>,
     events: broadcast::Sender<DownloadEvent>,
     result: oneshot::Sender<Result<DownloadResult, DownloadError>>,
 
@@ -98,6 +101,11 @@ impl Request {
         let _ = self.result.send(result);
     }
 
+    pub fn update_progress(&self, progress: Progress) {
+        // TODO: Log the error
+        let _ = self.progress.send(progress);
+    }
+
     pub fn start(&self) {
         self.emit(DownloadEvent::Started {
             id: self.id(),
@@ -175,6 +183,7 @@ impl RequestBuilder<'_> {
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
         let config = self.config.build()?;
 
+        let (progress_tx, progress_rx) = watch::channel(Progress::new(None));
         let (result_tx, result_rx) = oneshot::channel();
         let cancel_token = self.manager.child_token();
 
@@ -186,6 +195,7 @@ impl RequestBuilder<'_> {
             url,
             destination,
             config,
+            progress: progress_tx,
             events: event_tx,
             result: result_tx,
             cancel_token: cancel_token.clone(),
@@ -193,6 +203,12 @@ impl RequestBuilder<'_> {
 
         self.manager.queue_request(request)?;
 
-        Ok(Download::new(id, event_rx, result_rx, cancel_token))
+        Ok(Download::new(
+            id,
+            progress_rx,
+            event_rx,
+            result_rx,
+            cancel_token,
+        ))
     }
 }
