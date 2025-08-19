@@ -1,10 +1,11 @@
-use crate::DownloadError;
+use crate::{DownloadError, DownloadID};
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use tokio::sync::{oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 pub struct Download {
+    id: DownloadID,
     status: watch::Receiver<Status>,
     result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 
@@ -13,15 +14,21 @@ pub struct Download {
 
 impl Download {
     pub fn new(
+        id: DownloadID,
         status: watch::Receiver<Status>,
         result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
         cancel_token: CancellationToken,
     ) -> Self {
         Download {
+            id,
             status,
             result,
             cancel_token,
         }
+    }
+
+    pub fn id(&self) -> DownloadID {
+        self.id
     }
 
     pub fn cancel(&self) {

@@ -6,6 +6,7 @@ mod worker;
 
 use crate::{context::Context, request::RequestBuilder, worker::download_thread};
 pub use crate::{
+    context::DownloadID,
     download::{Download, DownloadResult, Status},
     error::DownloadError,
     request::Request,
