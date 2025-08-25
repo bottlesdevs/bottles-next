@@ -192,16 +192,21 @@ impl RequestBuilder<'_> {
         let id = self.manager.ctx.next_id();
         let request = Request {
             id,
-            url,
-            destination,
+            url: url.clone(),
+            destination: destination.clone(),
             config,
             progress: progress_tx,
-            events: event_tx,
+            events: event_tx.clone(),
             result: result_tx,
             cancel_token: cancel_token.clone(),
         };
 
         self.manager.queue_request(request)?;
+        event_tx.send(DownloadEvent::Queued {
+            id,
+            url,
+            destination,
+        })?;
 
         Ok(Download::new(
             id,
