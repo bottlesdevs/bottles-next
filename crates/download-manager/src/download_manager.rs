@@ -136,16 +136,16 @@ impl DownloadManagerBuilder {
             tracker: tracker.clone(),
         };
 
-        tracker.spawn(dispatcher_thread(ctx, rx, tracker.clone()));
+        tracker.spawn(dispatcher_thread(rx, tracker.clone(), ctx));
 
         Ok(manager)
     }
 }
 
 async fn dispatcher_thread(
-    ctx: Arc<Context>,
     mut rx: mpsc::Receiver<Request>,
     tracker: TaskTracker,
+    ctx: Arc<Context>,
 ) {
     struct ActiveGuard {
         ctx: Arc<Context>,
@@ -171,12 +171,12 @@ async fn dispatcher_thread(
             }
             Err(_) => break,
         };
-        let client = ctx.client.clone();
 
+        let ctx_clone = ctx.clone();
         tracker.spawn(async move {
             // Move the guard into the worker thread so it's automatically released when the thread finishes
             let _guard = guard;
-            download_thread(client, request).await
+            download_thread(request, ctx_clone).await
         });
     }
 }
