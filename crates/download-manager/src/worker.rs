@@ -1,6 +1,6 @@
-use crate::{DownloadError, DownloadResult, Progress, Request};
+use crate::{DownloadError, DownloadResult, Progress, Request, context::Context};
 use reqwest::Client;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::{fs::File, io::AsyncWriteExt};
 
 pub struct ExponentialBackoff {
@@ -20,7 +20,8 @@ const BACKOFF_STRATEGY: ExponentialBackoff = ExponentialBackoff {
     max_delay: Duration::from_secs(10),
 };
 
-pub(super) async fn download_thread(client: Client, mut request: Request) {
+pub(super) async fn download_thread(mut request: Request, ctx: Arc<Context>) {
+    let client = ctx.client.clone();
     request.start();
     let mut last_retryable_error: DownloadError =
         DownloadError::Unknown("Unknown Error".to_string());
