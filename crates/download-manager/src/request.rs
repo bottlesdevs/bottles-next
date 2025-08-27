@@ -103,15 +103,6 @@ impl Request {
         // TODO: Log the error
         let _ = self.progress.send(progress);
     }
-
-    pub fn start(&self) {
-        self.emit(DownloadEvent::Started {
-            id: self.id(),
-            url: self.url().clone(),
-            destination: self.destination().to_path_buf(),
-            total_bytes: None,
-        });
-    }
 }
 
 pub struct RequestBuilder<'a> {

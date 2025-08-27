@@ -263,7 +263,12 @@ impl Job {
 }
 
 pub async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Sender<WorkerMsg>) {
-    request.start();
+    request.emit(DownloadEvent::Started {
+        id: request.id(),
+        url: request.url().clone(),
+        destination: request.destination().to_path_buf(),
+        total_bytes: None,
+    });
 
     let result = attempt_download(request.as_ref(), ctx.client.clone()).await;
 
