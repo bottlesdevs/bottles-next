@@ -1,4 +1,5 @@
 use crate::DownloadID;
+use crate::download::RemoteInfo;
 use reqwest::Url;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -9,6 +10,10 @@ pub enum DownloadEvent {
         id: DownloadID,
         url: Url,
         destination: PathBuf,
+    },
+    Probed {
+        id: DownloadID,
+        info: RemoteInfo,
     },
     Started {
         id: DownloadID,

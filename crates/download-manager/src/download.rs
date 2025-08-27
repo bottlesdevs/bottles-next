@@ -56,6 +56,7 @@ impl Download {
             .filter(move |event| {
                 let matches = match event {
                     DownloadEvent::Queued { id, .. }
+                    | DownloadEvent::Probed { id, .. }
                     | DownloadEvent::Started { id, .. }
                     | DownloadEvent::Retrying { id, .. }
                     | DownloadEvent::Completed { id, .. }
@@ -90,4 +91,13 @@ impl std::future::Future for Download {
 pub struct DownloadResult {
     pub path: PathBuf,
     pub bytes_downloaded: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct RemoteInfo {
+    pub content_length: Option<u64>,
+    pub accept_ranges: Option<String>,
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+    pub content_type: Option<String>,
 }

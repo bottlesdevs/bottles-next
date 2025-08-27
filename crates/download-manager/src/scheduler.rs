@@ -5,7 +5,7 @@ use std::{
 };
 
 use futures_util::StreamExt;
-use reqwest::Client;
+use reqwest::{Client, Method};
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
@@ -15,6 +15,7 @@ use tokio_util::{task::TaskTracker, time::DelayQueue};
 
 use crate::{
     DownloadError, DownloadEvent, DownloadID, DownloadResult, Progress, Request, context::Context,
+    download::RemoteInfo,
 };
 
 pub struct ExponentialBackoff {
@@ -263,13 +264,6 @@ impl Job {
 }
 
 pub async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Sender<WorkerMsg>) {
-    request.emit(DownloadEvent::Started {
-        id: request.id(),
-        url: request.url().clone(),
-        destination: request.destination().to_path_buf(),
-        total_bytes: None,
-    });
-
     let result = attempt_download(request.as_ref(), ctx.client.clone()).await;
 
     let _ = worker_tx
@@ -280,16 +274,57 @@ pub async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Send
         .await;
 }
 
+async fn probe_head(request: &Request, client: &Client) -> Option<RemoteInfo> {
+    use reqwest::header;
+    let resp = client
+        .request(Method::HEAD, request.url().as_ref())
+        .headers(request.config().headers().clone())
+        .send()
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?;
+
+    let headers = resp.headers();
+    let content_length = resp.content_length();
+    let accept_ranges = headers
+        .get(header::ACCEPT_RANGES)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let etag = headers
+        .get(header::ETAG)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let last_modified = headers
+        .get(header::LAST_MODIFIED)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    Some(RemoteInfo {
+        content_length,
+        accept_ranges,
+        etag,
+        last_modified,
+        content_type,
+    })
+}
+
 async fn attempt_download(
     request: &Request,
     client: Client,
 ) -> Result<DownloadResult, DownloadError> {
-    let mut response = client
-        .get(request.url().as_ref())
-        .headers(request.config().headers().clone())
-        .send()
-        .await?
-        .error_for_status()?;
+    if let Some(info) = probe_head(request, &client).await {
+        request.emit(DownloadEvent::Probed {
+            id: request.id(),
+            info,
+        });
+    } else {
+        println!("Failed to probe HEAD for {}", request.url());
+    }
 
     if let Some(parent) = request.destination().parent() {
         tokio::fs::create_dir_all(parent).await?;
@@ -300,9 +335,23 @@ async fn attempt_download(
         });
     }
 
-    let mut file = File::create(request.destination()).await?;
-    let mut progress = Progress::new(response.content_length());
+    let mut response = client
+        .request(Method::GET, request.url().as_ref())
+        .headers(request.config().headers().clone())
+        .send()
+        .await?
+        .error_for_status()?;
+    let total_bytes = response.content_length();
 
+    let mut file = File::create(request.destination()).await?;
+    request.emit(DownloadEvent::Started {
+        id: request.id(),
+        url: request.url().clone(),
+        destination: request.destination().to_path_buf(),
+        total_bytes,
+    });
+
+    let mut progress = Progress::new(total_bytes);
     loop {
         tokio::select! {
             _ = request.cancel_token.cancelled() => {
