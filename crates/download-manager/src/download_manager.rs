@@ -3,9 +3,13 @@ mod download;
 mod error;
 mod events;
 mod request;
-mod worker;
+mod scheduler;
 
-use crate::{context::Context, request::RequestBuilder, worker::download_thread};
+use crate::{
+    context::Context,
+    request::RequestBuilder,
+    scheduler::{Scheduler, SchedulerCmd},
+};
 pub use crate::{
     context::DownloadID,
     download::{Download, DownloadResult},
@@ -24,7 +28,7 @@ use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 pub struct DownloadManager {
-    queue: mpsc::Sender<Request>,
+    scheduler_tx: mpsc::Sender<SchedulerCmd>,
     ctx: Arc<Context>,
     tracker: TaskTracker,
 }
@@ -53,22 +57,6 @@ impl DownloadManager {
 
     pub fn download_builder(&self) -> RequestBuilder {
         Request::builder(self)
-    }
-
-    fn queue_request(&self, request: Request) -> Result<(), DownloadError> {
-        self.queue.try_send(request).map_err(|e| match e {
-            mpsc::error::TrySendError::Full(_) => DownloadError::QueueFull,
-            mpsc::error::TrySendError::Closed(_) => DownloadError::ManagerShutdown,
-        })
-    }
-
-    /// Returns the count of pending requests still buffered in the internal mpsc channel.
-    ///
-    /// **Note**: This excludes any request already dequeued by the dispatcher but not yet started.
-    ///
-    /// Consider replacing with an explicit atomic counter.
-    pub fn queued_downloads(&self) -> usize {
-        self.queue.max_capacity() - self.queue.capacity()
     }
 
     pub fn active_downloads(&self) -> usize {
@@ -129,54 +117,16 @@ impl DownloadManagerBuilder {
         let (tx, rx) = mpsc::channel(queue_size);
         let ctx = Context::new(max_concurrent);
         let tracker = TaskTracker::new();
+        let scheduler = Scheduler::new(ctx.clone(), tracker.clone(), rx);
 
         let manager = DownloadManager {
-            queue: tx,
+            scheduler_tx: tx,
             ctx: ctx.clone(),
             tracker: tracker.clone(),
         };
 
-        tracker.spawn(dispatcher_thread(rx, tracker.clone(), ctx));
+        tracker.spawn(async move { scheduler.run().await });
 
         Ok(manager)
-    }
-}
-
-async fn dispatcher_thread(
-    mut rx: mpsc::Receiver<Request>,
-    tracker: TaskTracker,
-    ctx: Arc<Context>,
-) {
-    struct ActiveGuard {
-        ctx: Arc<Context>,
-        _permit: tokio::sync::OwnedSemaphorePermit,
-    }
-
-    impl Drop for ActiveGuard {
-        fn drop(&mut self) {
-            self.ctx
-                .active
-                .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-        }
-    }
-
-    while let Some(request) = rx.recv().await {
-        let guard = match ctx.semaphore.clone().acquire_owned().await {
-            Ok(p) => {
-                ctx.active.fetch_add(1, Ordering::Relaxed);
-                ActiveGuard {
-                    ctx: ctx.clone(),
-                    _permit: p,
-                }
-            }
-            Err(_) => break,
-        };
-
-        let ctx_clone = ctx.clone();
-        tracker.spawn(async move {
-            // Move the guard into the worker thread so it's automatically released when the thread finishes
-            let _guard = guard;
-            download_thread(request, ctx_clone).await
-        });
     }
 }
