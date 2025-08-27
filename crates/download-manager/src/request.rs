@@ -6,11 +6,14 @@ use reqwest::{
     Url,
     header::{HeaderMap, IntoHeaderName},
 };
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::sync::{broadcast, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Request {
     id: DownloadID,
     url: Url,
@@ -19,6 +22,9 @@ pub struct Request {
 
     progress: watch::Sender<Progress>,
     events: broadcast::Sender<DownloadEvent>,
+
+    pub(crate) on_progess: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
+    pub(crate) on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
 
     pub cancel_token: CancellationToken,
 }
@@ -71,6 +77,8 @@ impl Request {
             url: None,
             destination: None,
             config: DownloadConfigBuilder::default(),
+            on_progess: None,
+            on_event: None,
             manager,
         }
     }
@@ -79,9 +87,6 @@ impl Request {
         self.id
     }
 
-    /* TODO:
-     * Add callbacks like `on_update`, `on_progress`, `on_complete`, etc.
-     */
     pub fn url(&self) -> &Url {
         &self.url
     }
@@ -96,12 +101,14 @@ impl Request {
 
     pub fn emit(&self, event: DownloadEvent) {
         // TODO: Log the error
-        let _ = self.events.send(event);
+        let _ = self.events.send(event.clone());
+        self.on_event.as_ref().map(|cb| cb(event));
     }
 
     pub fn update_progress(&self, progress: Progress) {
         // TODO: Log the error
         let _ = self.progress.send(progress);
+        self.on_progess.as_ref().map(|cb| cb(progress));
     }
 }
 
@@ -109,6 +116,9 @@ pub struct RequestBuilder<'a> {
     url: Option<Url>,
     destination: Option<PathBuf>,
     config: DownloadConfigBuilder,
+
+    on_progess: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
+    on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
 
     manager: &'a DownloadManager,
 }
@@ -143,6 +153,22 @@ impl RequestBuilder<'_> {
         self
     }
 
+    pub fn on_progress<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(Progress) + Send + Sync + 'static,
+    {
+        self.on_progess = Some(Arc::new(Box::new(callback)));
+        self
+    }
+
+    pub fn on_event<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(DownloadEvent) + Send + Sync + 'static,
+    {
+        self.on_event = Some(Arc::new(Box::new(callback)));
+        self
+    }
+
     pub fn start(self) -> anyhow::Result<Download> {
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
@@ -157,11 +183,17 @@ impl RequestBuilder<'_> {
         let event_tx = self.manager.ctx.events.clone();
         let event_rx = event_tx.subscribe();
 
+        let on_progess = self.on_progess;
+        let on_event = self.on_event;
+
         let request = Request {
             id,
             url: url.clone(),
             destination: destination.clone(),
             config,
+
+            on_progess,
+            on_event,
 
             events: event_tx,
             progress: progress_tx,
