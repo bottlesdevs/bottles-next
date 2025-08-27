@@ -30,8 +30,15 @@ pub struct DownloadConfig {
     retries: u32,
     #[builder(default = "false")]
     overwrite: bool,
-    #[builder(default = "HeaderMap::new()", setter(skip))]
+    #[builder(field(ty = "HeaderMap"), setter(custom))]
     headers: HeaderMap,
+}
+
+impl DownloadConfigBuilder {
+    pub fn header(mut self, header: impl IntoHeaderName, value: impl AsRef<str>) -> Self {
+        self.headers.insert(header, value.as_ref().parse().unwrap());
+        self
+    }
 }
 
 impl Default for DownloadConfig {
@@ -64,7 +71,6 @@ impl Request {
             url: None,
             destination: None,
             config: DownloadConfigBuilder::default(),
-            headers: HeaderMap::new(),
             manager,
         }
     }
@@ -112,7 +118,6 @@ pub struct RequestBuilder<'a> {
     url: Option<Url>,
     destination: Option<PathBuf>,
     config: DownloadConfigBuilder,
-    headers: HeaderMap,
 
     manager: &'a DownloadManager,
 }
@@ -143,7 +148,7 @@ impl RequestBuilder<'_> {
     }
 
     pub fn header(mut self, header: impl IntoHeaderName, value: impl AsRef<str>) -> Self {
-        self.headers.insert(header, value.as_ref().parse().unwrap());
+        self.config = self.config.header(header, value);
         self
     }
 
