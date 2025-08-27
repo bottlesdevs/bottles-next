@@ -1,15 +1,16 @@
 use crate::{
-    Download, DownloadError, DownloadEvent, DownloadID, DownloadManager, DownloadResult, Progress,
+    Download, DownloadEvent, DownloadID, DownloadManager, Progress, scheduler::SchedulerCmd,
 };
 use derive_builder::Builder;
-use reqwest::Url;
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
+use reqwest::{
+    Url,
+    header::{HeaderMap, IntoHeaderName},
 };
+use std::path::{Path, PathBuf};
 use tokio::sync::{broadcast, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
+#[derive(Debug, Clone)]
 pub struct Request {
     id: DownloadID,
     url: Url,
@@ -18,28 +19,27 @@ pub struct Request {
 
     progress: watch::Sender<Progress>,
     events: broadcast::Sender<DownloadEvent>,
-    result: oneshot::Sender<Result<DownloadResult, DownloadError>>,
 
     pub cancel_token: CancellationToken,
 }
 
-#[derive(Debug, Builder)]
+#[derive(Debug, Builder, Clone)]
 #[builder(pattern = "owned")]
 pub struct DownloadConfig {
     #[builder(default = "3")]
     retries: u32,
-    #[builder(default, setter(strip_option))]
-    user_agent: Option<String>,
     #[builder(default = "false")]
     overwrite: bool,
+    #[builder(default = "HeaderMap::new()", setter(skip))]
+    headers: HeaderMap,
 }
 
 impl Default for DownloadConfig {
     fn default() -> Self {
         DownloadConfig {
             retries: 3,
-            user_agent: None,
             overwrite: false,
+            headers: HeaderMap::new(),
         }
     }
 }
@@ -49,12 +49,12 @@ impl DownloadConfig {
         self.retries
     }
 
-    pub fn user_agent(&self) -> Option<&str> {
-        self.user_agent.as_deref()
-    }
-
     pub fn overwrite(&self) -> bool {
         self.overwrite
+    }
+
+    pub fn headers(&self) -> &HeaderMap {
+        &self.headers
     }
 }
 
@@ -64,6 +64,7 @@ impl Request {
             url: None,
             destination: None,
             config: DownloadConfigBuilder::default(),
+            headers: HeaderMap::new(),
             manager,
         }
     }
@@ -87,18 +88,9 @@ impl Request {
         &self.config
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        self.cancel_token.is_cancelled()
-    }
-
-    fn emit(&self, event: DownloadEvent) {
+    pub fn emit(&self, event: DownloadEvent) {
         // TODO: Log the error
         let _ = self.events.send(event);
-    }
-
-    fn send_result(self, result: Result<DownloadResult, DownloadError>) {
-        // TODO: Log the error
-        let _ = self.result.send(result);
     }
 
     pub fn update_progress(&self, progress: Progress) {
@@ -110,35 +102,9 @@ impl Request {
         self.emit(DownloadEvent::Started {
             id: self.id(),
             url: self.url().clone(),
-            destination: self.destination.clone(),
+            destination: self.destination().to_path_buf(),
             total_bytes: None,
         });
-    }
-
-    pub fn fail(self, error: DownloadError) {
-        self.send_result(Err(error));
-    }
-
-    pub fn finish(self, result: DownloadResult) {
-        self.emit(DownloadEvent::Completed {
-            id: self.id(),
-            path: result.path.clone(),
-            bytes_downloaded: result.bytes_downloaded,
-        });
-        self.send_result(Ok(result))
-    }
-
-    pub fn retry(&self, attempt: u32, delay: Duration) {
-        self.emit(DownloadEvent::Retrying {
-            id: self.id(),
-            attempt,
-            next_delay_ms: delay.as_millis() as u64,
-        });
-    }
-
-    pub fn cancel(self) {
-        self.emit(DownloadEvent::Cancelled { id: self.id() });
-        self.send_result(Err(DownloadError::Cancelled))
     }
 }
 
@@ -146,6 +112,7 @@ pub struct RequestBuilder<'a> {
     url: Option<Url>,
     destination: Option<PathBuf>,
     config: DownloadConfigBuilder,
+    headers: HeaderMap,
 
     manager: &'a DownloadManager,
 }
@@ -166,13 +133,17 @@ impl RequestBuilder<'_> {
         self
     }
 
-    pub fn user_agent(mut self, user_agent: impl AsRef<str>) -> Self {
-        self.config = self.config.user_agent(user_agent.as_ref().into());
-        self
+    pub fn user_agent(self, user_agent: impl AsRef<str>) -> Self {
+        self.header(reqwest::header::USER_AGENT, user_agent)
     }
 
     pub fn overwrite(mut self, overwrite: bool) -> Self {
         self.config = self.config.overwrite(overwrite);
+        self
+    }
+
+    pub fn header(mut self, header: impl IntoHeaderName, value: impl AsRef<str>) -> Self {
+        self.headers.insert(header, value.as_ref().parse().unwrap());
         self
     }
 
@@ -183,30 +154,27 @@ impl RequestBuilder<'_> {
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
         let config = self.config.build()?;
 
-        let (progress_tx, progress_rx) = watch::channel(Progress::new(None));
+        let id = self.manager.ctx.next_id();
         let (result_tx, result_rx) = oneshot::channel();
+        let (progress_tx, progress_rx) = watch::channel(Progress::new(None));
         let cancel_token = self.manager.child_token();
-
         let event_tx = self.manager.ctx.events.clone();
         let event_rx = event_tx.subscribe();
-        let id = self.manager.ctx.next_id();
+
         let request = Request {
             id,
             url: url.clone(),
             destination: destination.clone(),
             config,
+
+            events: event_tx,
             progress: progress_tx,
-            events: event_tx.clone(),
-            result: result_tx,
             cancel_token: cancel_token.clone(),
         };
 
-        self.manager.queue_request(request)?;
-        event_tx.send(DownloadEvent::Queued {
-            id,
-            url,
-            destination,
-        })?;
+        self.manager
+            .scheduler_tx
+            .try_send(SchedulerCmd::Enqueue { request, result_tx });
 
         Ok(Download::new(
             id,
