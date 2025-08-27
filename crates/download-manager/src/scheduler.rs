@@ -286,6 +286,7 @@ async fn attempt_download(
 ) -> Result<DownloadResult, DownloadError> {
     let mut response = client
         .get(request.url().as_ref())
+        .headers(request.config().headers().clone())
         .send()
         .await?
         .error_for_status()?;
