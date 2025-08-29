@@ -23,7 +23,7 @@ pub struct Request {
     progress: watch::Sender<Progress>,
     events: broadcast::Sender<DownloadEvent>,
 
-    pub(crate) on_progess: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
+    pub(crate) on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
     pub(crate) on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
 
     pub cancel_token: CancellationToken,
@@ -77,7 +77,7 @@ impl Request {
             url: None,
             destination: None,
             config: DownloadConfigBuilder::default(),
-            on_progess: None,
+            on_progress: None,
             on_event: None,
             manager,
         }
@@ -108,7 +108,7 @@ impl Request {
     pub fn update_progress(&self, progress: Progress) {
         // TODO: Log the error
         let _ = self.progress.send(progress);
-        self.on_progess.as_ref().map(|cb| cb(progress));
+        self.on_progress.as_ref().map(|cb| cb(progress));
     }
 }
 
@@ -117,7 +117,7 @@ pub struct RequestBuilder<'a> {
     destination: Option<PathBuf>,
     config: DownloadConfigBuilder,
 
-    on_progess: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
+    on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
     on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
 
     manager: &'a DownloadManager,
@@ -157,7 +157,7 @@ impl RequestBuilder<'_> {
     where
         F: Fn(Progress) + Send + Sync + 'static,
     {
-        self.on_progess = Some(Arc::new(Box::new(callback)));
+        self.on_progress = Some(Arc::new(Box::new(callback)));
         self
     }
 
@@ -183,7 +183,7 @@ impl RequestBuilder<'_> {
         let event_tx = self.manager.ctx.events.clone();
         let event_rx = event_tx.subscribe();
 
-        let on_progess = self.on_progess;
+        let on_progress = self.on_progress;
         let on_event = self.on_event;
 
         let request = Request {
@@ -192,7 +192,7 @@ impl RequestBuilder<'_> {
             destination: destination.clone(),
             config,
 
-            on_progess,
+            on_progress,
             on_event,
 
             events: event_tx,
