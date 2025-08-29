@@ -37,7 +37,6 @@ impl Default for DownloadManager {
     fn default() -> Self {
         DownloadManager::builder()
             .max_concurrent(3)
-            .queue_size(100)
             .build()
             .unwrap()
     }
@@ -96,14 +95,12 @@ impl DownloadManager {
 
 pub struct DownloadManagerBuilder {
     max_concurrent: Option<usize>,
-    queue_size: Option<usize>,
 }
 
 impl DownloadManagerBuilder {
     pub fn new() -> Self {
         Self {
             max_concurrent: None,
-            queue_size: None,
         }
     }
 
@@ -112,27 +109,18 @@ impl DownloadManagerBuilder {
         self
     }
 
-    pub fn queue_size(mut self, size: usize) -> Self {
-        self.queue_size = Some(size);
-        self
-    }
-
     pub fn build(self) -> anyhow::Result<DownloadManager> {
         let max_concurrent = self.max_concurrent.filter(|&n| n > 0).ok_or_else(|| {
             anyhow::anyhow!("Max concurrent downloads must be set and greater than 0")
         })?;
-        let queue_size = self
-            .queue_size
-            .filter(|&n| n > 0)
-            .ok_or_else(|| anyhow::anyhow!("Queue size must be set and greater than 0"))?;
 
-        let (tx, rx) = mpsc::channel(queue_size);
+        let (cmd_tx, cmd_rx) = mpsc::channel(1024);
         let ctx = Context::new(max_concurrent);
         let tracker = TaskTracker::new();
-        let scheduler = Scheduler::new(ctx.clone(), tracker.clone(), rx);
+        let scheduler = Scheduler::new(ctx.clone(), tracker.clone(), cmd_rx);
 
         let manager = DownloadManager {
-            scheduler_tx: tx,
+            scheduler_tx: cmd_tx,
             ctx: ctx.clone(),
             tracker: tracker.clone(),
         };

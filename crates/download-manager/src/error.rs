@@ -11,8 +11,6 @@ pub enum DownloadError {
     Cancelled,
     #[error("Retry limit exceeded: {last_error}")]
     RetriesExhausted { last_error: Box<DownloadError> },
-    #[error("Download queue is full")]
-    QueueFull,
     #[error("Download manager has been shut down")]
     ManagerShutdown,
     #[error("File already exists: {path}")]
