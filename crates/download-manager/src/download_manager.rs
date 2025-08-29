@@ -86,6 +86,12 @@ impl DownloadManager {
 
         BroadcastStream::new(self.subscribe()).filter_map(|res| res.ok())
     }
+
+    pub async fn shutdown(&self) {
+        self.cancel_all();
+        self.tracker.close();
+        self.tracker.wait().await;
+    }
 }
 
 pub struct DownloadManagerBuilder {
