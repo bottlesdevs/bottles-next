@@ -59,6 +59,12 @@ impl DownloadManager {
         Request::builder(self)
     }
 
+    pub fn cancel(&self, id: DownloadID) -> anyhow::Result<()> {
+        self.scheduler_tx
+            .try_send(SchedulerCmd::Cancel { id })
+            .map_err(|e| anyhow::anyhow!("Failed to send cancel command: {}", e))
+    }
+
     pub fn active_downloads(&self) -> usize {
         self.ctx.active.load(Ordering::Relaxed)
     }
