@@ -202,7 +202,7 @@ impl RequestBuilder<'_> {
 
         self.manager
             .scheduler_tx
-            .try_send(SchedulerCmd::Enqueue { request, result_tx });
+            .try_send(SchedulerCmd::Enqueue { request, result_tx })?;
 
         Ok(Download::new(
             id,
