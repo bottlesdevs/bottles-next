@@ -322,8 +322,6 @@ async fn attempt_download(
             id: request.id(),
             info,
         });
-    } else {
-        println!("Failed to probe HEAD for {}", request.url());
     }
 
     if let Some(parent) = request.destination().parent() {
