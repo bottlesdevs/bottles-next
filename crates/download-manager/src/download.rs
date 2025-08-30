@@ -5,6 +5,12 @@ use tokio::sync::{broadcast, oneshot, watch};
 use tokio_stream::wrappers::{BroadcastStream, WatchStream};
 use tokio_util::sync::CancellationToken;
 
+/// Handle for a single download scheduled by DownloadManager.
+///
+/// Behavior:
+/// - Implements Future; awaiting resolves to DownloadResult or DownloadError.
+/// - Exposes per-download streams via [Download::progress()] and [Download::events()].
+/// - Cancellation is cooperative via [Download::cancel()]; the worker aborts the HTTP request and removes any partial file.
 pub struct Download {
     id: DownloadID,
     progress: watch::Receiver<Progress>,
@@ -31,10 +37,15 @@ impl Download {
         }
     }
 
+    /// Unique identifier for this download, matching [DownloadEvent] IDs.
     pub fn id(&self) -> DownloadID {
         self.id
     }
 
+    /// Request cooperative cancellation of this download.
+    ///
+    /// The scheduler/worker aborts the in-flight HTTP request and deletes any partially
+    /// written file. Cancellation is best-effort and may race with completion.
     pub fn cancel(&self) {
         self.cancel_token.cancel();
     }
@@ -43,10 +54,18 @@ impl Download {
         self.progress.clone()
     }
 
+    /// Stream of sampled Progress updates for this download.
+    ///
+    /// Backed by a watch channel: consumers receive the latest state immediately,
+    /// and updates are coalesced according to sampling thresholds.
     pub fn progress(&self) -> impl Stream<Item = Progress> + 'static {
         WatchStream::new(self.progress_raw())
     }
 
+    /// Stream of [DownloadEvent] values scoped to this download only.
+    ///
+    /// Backed by a broadcast channel; lagged consumers may drop messages.
+    /// This stream filters events to those whose id matches this handle.
     pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {
         use tokio_stream::StreamExt as _;
 
@@ -94,6 +113,8 @@ pub struct DownloadResult {
 }
 
 #[derive(Debug, Clone)]
+/// Remote metadata obtained via a best-effort `HEAD` probe prior to downloading.
+/// Availability depends on server support; fields are None when not provided.
 pub struct RemoteInfo {
     pub content_length: Option<u64>,
     pub accept_ranges: Option<String>,

@@ -150,6 +150,7 @@ impl Scheduler {
             },
         }
     }
+
     async fn handle_cmd(&mut self, cmd: SchedulerCmd) {
         match cmd {
             SchedulerCmd::Enqueue { request, result_tx } => {
@@ -191,6 +192,7 @@ impl Scheduler {
             let permit = match self.ctx.semaphore.clone().try_acquire_owned() {
                 Ok(p) => p,
                 Err(_) => {
+                    // No permits left; put the job back to the front and stop dispatching for now.
                     self.ready.push_front(id);
                     return;
                 }

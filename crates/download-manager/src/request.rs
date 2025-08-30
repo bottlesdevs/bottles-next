@@ -13,6 +13,11 @@ use std::{
 use tokio::sync::{broadcast, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
+/// Immutable description of a single download request.
+///
+/// Built by [RequestBuilder] and executed by the scheduler. Holds destination,
+/// headers, retry policy, and user callbacks. Most users should prefer creating
+/// requests via [DownloadManager::download_builder()].
 #[derive(Clone)]
 pub struct Request {
     id: DownloadID,
@@ -29,6 +34,12 @@ pub struct Request {
     pub cancel_token: CancellationToken,
 }
 
+/// Per-request configuration for retries, overwrite behavior, and headers.
+///
+/// Behavior
+/// - `retries`: maximum retry attempts for retryable network errors (default 3).
+/// - `overwrite`: when false, existing destination paths cause FileExists errors.
+/// - `headers`: extra HTTP headers (e.g., User-Agent).
 #[derive(Debug, Builder, Clone)]
 #[builder(pattern = "owned")]
 pub struct DownloadConfig {
@@ -41,6 +52,9 @@ pub struct DownloadConfig {
 }
 
 impl DownloadConfigBuilder {
+    /// Add an HTTP header to the request configuration.
+    ///
+    /// The value must be a valid HTTP header value; invalid values will panic during parsing.
     pub fn header(mut self, header: impl IntoHeaderName, value: impl AsRef<str>) -> Self {
         self.headers.insert(header, value.as_ref().parse().unwrap());
         self
@@ -58,14 +72,17 @@ impl Default for DownloadConfig {
 }
 
 impl DownloadConfig {
+    /// Maximum retry attempts for retryable network errors.
     pub fn retries(&self) -> u32 {
         self.retries
     }
 
+    /// Whether an existing destination file may be overwritten.
     pub fn overwrite(&self) -> bool {
         self.overwrite
     }
 
+    /// Additional headers applied to both the HEAD probe and the GET request.
     pub fn headers(&self) -> &HeaderMap {
         &self.headers
     }
@@ -112,6 +129,9 @@ impl Request {
     }
 }
 
+/// Builder for Request. Configure URL, destination, headers, retries, overwrite, and callbacks.
+///
+/// After configuration, call [RequestBuilder::start()] to enqueue the download and obtain a [Download] handle.
 pub struct RequestBuilder<'a> {
     url: Option<Url>,
     destination: Option<PathBuf>,
@@ -124,35 +144,48 @@ pub struct RequestBuilder<'a> {
 }
 
 impl RequestBuilder<'_> {
+    /// Set the source URL for the download.
     pub fn url(mut self, url: Url) -> Self {
         self.url = Some(url);
         self
     }
 
+    /// Set the destination path. Parent directories are created when starting.
+    ///
+    /// If overwrite is false and the file exists, start() will error.
     pub fn destination(mut self, destination: impl AsRef<Path>) -> Self {
         self.destination = Some(destination.as_ref().to_path_buf());
         self
     }
 
+    /// Set the maximum retry attempts for retryable network errors.
     pub fn retries(mut self, retries: u32) -> Self {
         self.config = self.config.retries(retries);
         self
     }
 
+    /// Convenience for setting the User-Agent header.
     pub fn user_agent(self, user_agent: impl AsRef<str>) -> Self {
         self.header(reqwest::header::USER_AGENT, user_agent)
     }
 
+    /// Control whether an existing destination file may be overwritten.
     pub fn overwrite(mut self, overwrite: bool) -> Self {
         self.config = self.config.overwrite(overwrite);
         self
     }
 
+    /// Add an HTTP header (e.g., Authorization, Range).
+    ///
+    /// Note: value must be a valid header value; invalid values cause a panic during build.
     pub fn header(mut self, header: impl IntoHeaderName, value: impl AsRef<str>) -> Self {
         self.config = self.config.header(header, value);
         self
     }
 
+    /// Register a callback invoked when sampled Progress updates are produced.
+    ///
+    /// Called on async worker context; keep the callback lightweight.
     pub fn on_progress<F>(mut self, callback: F) -> Self
     where
         F: Fn(Progress) + Send + Sync + 'static,
@@ -161,6 +194,9 @@ impl RequestBuilder<'_> {
         self
     }
 
+    /// Register a callback for per-download DownloadEvent notifications.
+    ///
+    /// Called for events emitted for this request only.
     pub fn on_event<F>(mut self, callback: F) -> Self
     where
         F: Fn(DownloadEvent) + Send + Sync + 'static,
@@ -169,6 +205,10 @@ impl RequestBuilder<'_> {
         self
     }
 
+    /// Finalize the request, enqueue it, and return a Download handle.
+    ///
+    /// Errors if url or destination are not set, or if the internal channel is unavailable.
+    /// The returned handle implements [Future].
     pub fn start(self) -> anyhow::Result<Download> {
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
