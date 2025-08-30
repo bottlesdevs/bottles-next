@@ -3,9 +3,36 @@ use crate::download::RemoteInfo;
 use reqwest::Url;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+use tokio::sync::broadcast;
 
 #[derive(Debug, Clone)]
-pub enum DownloadEvent {
+pub(crate) struct EventBus(broadcast::Sender<Event>);
+
+impl EventBus {
+    pub fn new() -> Self {
+        let (tx, _rx) = broadcast::channel(1024);
+        EventBus(tx)
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<Event> {
+        self.0.subscribe()
+    }
+
+    pub fn events(&self) -> impl tokio_stream::Stream<Item = Event> + 'static {
+        use tokio_stream::StreamExt as _;
+        use tokio_stream::wrappers::BroadcastStream;
+
+        BroadcastStream::new(self.subscribe()).filter_map(|res| res.ok())
+    }
+
+    pub fn send(&self, event: Event) {
+        // TODO: Log the error
+        let _ = self.0.send(event);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Event {
     Queued {
         id: DownloadID,
         url: Url,
@@ -38,6 +65,48 @@ pub enum DownloadEvent {
     Cancelled {
         id: DownloadID,
     },
+}
+
+impl std::fmt::Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Event::Queued { id, .. } => write!(f, "[{}] Queued", id),
+            Event::Probed { id, info } => write!(f, "[{}] Probed: {:?}", id, info),
+            Event::Failed { id, error } => write!(f, "[{}] Failed: {}", id, error),
+            Event::Cancelled { id } => write!(f, "[{}] Cancelled", id),
+            Event::Started {
+                id, total_bytes, ..
+            } => {
+                if let Some(total) = total_bytes {
+                    write!(f, "[{}] Started ({} bytes)", id, total)
+                } else {
+                    write!(f, "[{}] Started", id)
+                }
+            }
+            Event::Retrying {
+                id,
+                attempt,
+                next_delay_ms,
+            } => {
+                write!(
+                    f,
+                    "[{}] Retrying: attempt {} in {} ms",
+                    id, attempt, next_delay_ms
+                )
+            }
+            Event::Completed {
+                id,
+                path,
+                bytes_downloaded,
+            } => {
+                write!(
+                    f,
+                    "[{}] Completed: {:?} ({} bytes)",
+                    id, path, bytes_downloaded
+                )
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

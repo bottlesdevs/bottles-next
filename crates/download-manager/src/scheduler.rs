@@ -14,7 +14,7 @@ use tokio::{
 use tokio_util::{task::TaskTracker, time::DelayQueue};
 
 use crate::{
-    DownloadError, DownloadEvent, DownloadID, DownloadResult, Progress, Request, context::Context,
+    DownloadError, DownloadID, DownloadResult, Event, Progress, Request, context::Context,
     download::RemoteInfo,
 };
 
@@ -88,7 +88,7 @@ impl Scheduler {
     fn schedule(&mut self, job: Job) {
         let request = &job.request;
         let id = job.id();
-        request.emit(DownloadEvent::Queued {
+        request.emit(Event::Queued {
             id,
             url: request.url().clone(),
             destination: request.destination().to_path_buf(),
@@ -233,7 +233,7 @@ impl Job {
     }
 
     fn fail(self, error: DownloadError) {
-        self.request.emit(DownloadEvent::Failed {
+        self.request.emit(Event::Failed {
             id: self.id(),
             error: error.to_string(),
         });
@@ -241,7 +241,7 @@ impl Job {
     }
 
     fn finish(self, result: DownloadResult) {
-        self.request.emit(DownloadEvent::Completed {
+        self.request.emit(Event::Completed {
             id: self.id(),
             path: result.path.clone(),
             bytes_downloaded: result.bytes_downloaded,
@@ -250,7 +250,7 @@ impl Job {
     }
 
     fn retry(&self, delay: Duration) {
-        self.request.emit(DownloadEvent::Retrying {
+        self.request.emit(Event::Retrying {
             id: self.id(),
             attempt: self.attempt,
             next_delay_ms: delay.as_millis() as u64,
@@ -259,8 +259,7 @@ impl Job {
 
     fn cancel(self) {
         self.request.cancel_token.cancel();
-        self.request
-            .emit(DownloadEvent::Cancelled { id: self.id() });
+        self.request.emit(Event::Cancelled { id: self.id() });
         self.send_result(Err(DownloadError::Cancelled))
     }
 }
@@ -320,7 +319,7 @@ async fn attempt_download(
     client: Client,
 ) -> Result<DownloadResult, DownloadError> {
     if let Some(info) = probe_head(request, &client).await {
-        request.emit(DownloadEvent::Probed {
+        request.emit(Event::Probed {
             id: request.id(),
             info,
         });
@@ -344,7 +343,7 @@ async fn attempt_download(
     let total_bytes = response.content_length();
 
     let mut file = File::create(request.destination()).await?;
-    request.emit(DownloadEvent::Started {
+    request.emit(Event::Started {
         id: request.id(),
         url: request.url().clone(),
         destination: request.destination().to_path_buf(),
@@ -364,8 +363,7 @@ async fn attempt_download(
                     Ok(Some(chunk)) => {
                         file.write_all(&chunk).await?;
                         if progress.update(chunk.len() as u64) {
-                            // TODO: Log the error
-                            let _ = request.update_progress(progress);
+                            request.update_progress(progress);
                         }
                     }
                     Ok(None) => break,

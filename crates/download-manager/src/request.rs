@@ -1,5 +1,6 @@
 use crate::{
-    Download, DownloadEvent, DownloadID, DownloadManager, Progress, scheduler::SchedulerCmd,
+    Download, DownloadID, DownloadManager, Event, Progress, events::EventBus,
+    scheduler::SchedulerCmd,
 };
 use derive_builder::Builder;
 use reqwest::{
@@ -10,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tokio::sync::{broadcast, oneshot, watch};
+use tokio::sync::{oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 /// Immutable description of a single download request.
@@ -26,10 +27,10 @@ pub struct Request {
     config: DownloadConfig,
 
     progress: watch::Sender<Progress>,
-    events: broadcast::Sender<DownloadEvent>,
+    events: EventBus,
 
     pub(crate) on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
-    pub(crate) on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
+    pub(crate) on_event: Option<Arc<Box<dyn Fn(Event) + Send + Sync>>>,
 
     pub cancel_token: CancellationToken,
 }
@@ -116,9 +117,8 @@ impl Request {
         &self.config
     }
 
-    pub fn emit(&self, event: DownloadEvent) {
-        // TODO: Log the error
-        let _ = self.events.send(event.clone());
+    pub fn emit(&self, event: Event) {
+        self.events.send(event.clone());
         self.on_event.as_ref().map(|cb| cb(event));
     }
 
@@ -138,7 +138,7 @@ pub struct RequestBuilder<'a> {
     config: DownloadConfigBuilder,
 
     on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
-    on_event: Option<Arc<Box<dyn Fn(DownloadEvent) + Send + Sync>>>,
+    on_event: Option<Arc<Box<dyn Fn(Event) + Send + Sync>>>,
 
     manager: &'a DownloadManager,
 }
@@ -199,7 +199,7 @@ impl RequestBuilder<'_> {
     /// Called for events emitted for this request only.
     pub fn on_event<F>(mut self, callback: F) -> Self
     where
-        F: Fn(DownloadEvent) + Send + Sync + 'static,
+        F: Fn(Event) + Send + Sync + 'static,
     {
         self.on_event = Some(Arc::new(Box::new(callback)));
         self
@@ -220,8 +220,8 @@ impl RequestBuilder<'_> {
         let (result_tx, result_rx) = oneshot::channel();
         let (progress_tx, progress_rx) = watch::channel(Progress::new(None));
         let cancel_token = self.manager.child_token();
-        let event_tx = self.manager.ctx.events.clone();
-        let event_rx = event_tx.subscribe();
+        let event_bus = self.manager.ctx.events.clone();
+        let event_rx = event_bus.subscribe();
 
         let on_progress = self.on_progress;
         let on_event = self.on_event;
@@ -235,7 +235,7 @@ impl RequestBuilder<'_> {
             on_progress,
             on_event,
 
-            events: event_tx,
+            events: event_bus,
             progress: progress_tx,
             cancel_token: cancel_token.clone(),
         };

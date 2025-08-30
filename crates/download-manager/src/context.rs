@@ -3,10 +3,10 @@ use std::sync::{
     Arc,
     atomic::{AtomicU64, AtomicUsize, Ordering},
 };
-use tokio::sync::{Semaphore, broadcast};
+use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 
-use crate::DownloadEvent;
+use crate::events::EventBus;
 
 /// Unique identifier for a download; monotonically increasing u64.
 pub type DownloadID = u64;
@@ -33,7 +33,7 @@ pub(crate) struct Context {
     pub max_concurrent: AtomicUsize,
 
     /// Global [DownloadEvent] broadcaster (buffered). Slow subscribers may miss events.
-    pub events: broadcast::Sender<DownloadEvent>,
+    pub events: EventBus,
 }
 
 impl Context {
@@ -42,7 +42,6 @@ impl Context {
     /// - Creates a root [CancellationToken] and a broadcast channel (capacity 1024).
     /// - Constructs a shared [reqwest::Client].
     pub fn new(max_concurrent: usize) -> Arc<Self> {
-        let (events, _) = broadcast::channel(1024);
         Arc::new(Self {
             semaphore: Arc::new(Semaphore::new(max_concurrent)),
             max_concurrent: AtomicUsize::new(max_concurrent),
@@ -50,7 +49,7 @@ impl Context {
             active: AtomicUsize::new(0),
             id_counter: AtomicU64::new(1),
             client: Client::new(),
-            events,
+            events: EventBus::new(),
         })
     }
 

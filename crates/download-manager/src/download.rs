@@ -1,4 +1,4 @@
-use crate::{DownloadError, DownloadEvent, DownloadID, Progress};
+use crate::{DownloadError, DownloadID, Event, Progress};
 use futures_core::Stream;
 use std::path::PathBuf;
 use tokio::sync::{broadcast, oneshot, watch};
@@ -14,7 +14,7 @@ use tokio_util::sync::CancellationToken;
 pub struct Download {
     id: DownloadID,
     progress: watch::Receiver<Progress>,
-    events: broadcast::Receiver<DownloadEvent>,
+    events: broadcast::Receiver<Event>,
     result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 
     cancel_token: CancellationToken,
@@ -24,7 +24,7 @@ impl Download {
     pub(crate) fn new(
         id: DownloadID,
         progress: watch::Receiver<Progress>,
-        events: broadcast::Receiver<DownloadEvent>,
+        events: broadcast::Receiver<Event>,
         result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
         cancel_token: CancellationToken,
     ) -> Self {
@@ -66,7 +66,7 @@ impl Download {
     ///
     /// Backed by a broadcast channel; lagged consumers may drop messages.
     /// This stream filters events to those whose id matches this handle.
-    pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {
+    pub fn events(&self) -> impl Stream<Item = Event> + 'static {
         use tokio_stream::StreamExt as _;
 
         let download_id = self.id;
@@ -74,13 +74,13 @@ impl Download {
             .filter_map(|res| res.ok())
             .filter(move |event| {
                 let matches = match event {
-                    DownloadEvent::Queued { id, .. }
-                    | DownloadEvent::Probed { id, .. }
-                    | DownloadEvent::Started { id, .. }
-                    | DownloadEvent::Retrying { id, .. }
-                    | DownloadEvent::Completed { id, .. }
-                    | DownloadEvent::Failed { id, .. }
-                    | DownloadEvent::Cancelled { id, .. } => *id == download_id,
+                    Event::Queued { id, .. }
+                    | Event::Probed { id, .. }
+                    | Event::Started { id, .. }
+                    | Event::Retrying { id, .. }
+                    | Event::Completed { id, .. }
+                    | Event::Failed { id, .. }
+                    | Event::Cancelled { id, .. } => *id == download_id,
                 };
 
                 matches
