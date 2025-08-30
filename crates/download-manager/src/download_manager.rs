@@ -9,7 +9,7 @@ pub mod prelude {
         context::DownloadID,
         download::{Download, DownloadResult},
         error::DownloadError,
-        events::{DownloadEvent, Progress},
+        events::{Event, Progress},
         request::Request,
     };
 }
@@ -27,7 +27,6 @@ use std::{
     sync::{Arc, atomic::Ordering},
 };
 use tokio::sync::{broadcast, mpsc};
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 /// Entry point for scheduling, observing, and cancelling downloads.
@@ -116,17 +115,15 @@ impl DownloadManager {
     ///
     /// The underlying broadcast channel has a bounded buffer (1024). Slow consumers may lag and
     /// miss events. Consider using [DownloadManager::events()] for a stream that skips lagged messages gracefully.
-    pub fn subscribe(&self) -> broadcast::Receiver<DownloadEvent> {
+    pub fn subscribe(&self) -> broadcast::Receiver<Event> {
         self.ctx.events.subscribe()
     }
 
     /// A fallible-safe stream of global [DownloadEvent] values.
     ///
     /// Internally wraps the broadcast receiver and filters out lagged/closed errors.
-    pub fn events(&self) -> impl Stream<Item = DownloadEvent> + 'static {
-        use tokio_stream::StreamExt as _;
-
-        BroadcastStream::new(self.subscribe()).filter_map(|res| res.ok())
+    pub fn events(&self) -> impl Stream<Item = Event> + 'static {
+        self.ctx.events.events()
     }
 
     /// Gracefully stop the manager.
