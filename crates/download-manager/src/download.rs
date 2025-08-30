@@ -21,7 +21,7 @@ pub struct Download {
 }
 
 impl Download {
-    pub fn new(
+    pub(crate) fn new(
         id: DownloadID,
         progress: watch::Receiver<Progress>,
         events: broadcast::Receiver<DownloadEvent>,
