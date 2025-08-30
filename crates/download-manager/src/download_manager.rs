@@ -4,20 +4,23 @@ mod error;
 mod events;
 mod request;
 mod scheduler;
+pub mod prelude {
+    pub use crate::{
+        context::DownloadID,
+        download::{Download, DownloadResult},
+        error::DownloadError,
+        events::{DownloadEvent, Progress},
+        request::Request,
+    };
+}
 
 use crate::{
     context::Context,
     request::RequestBuilder,
     scheduler::{Scheduler, SchedulerCmd},
 };
-pub use crate::{
-    context::DownloadID,
-    download::{Download, DownloadResult},
-    error::DownloadError,
-    events::{DownloadEvent, Progress},
-    request::Request,
-};
 use futures_core::Stream;
+use prelude::*;
 use reqwest::Url;
 use std::{
     path::Path,

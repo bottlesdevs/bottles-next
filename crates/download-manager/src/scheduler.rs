@@ -36,7 +36,7 @@ static BACKOFF_STRATEGY: ExponentialBackoff = ExponentialBackoff {
     max_delay: Duration::from_secs(10),
 };
 
-pub enum SchedulerCmd {
+pub(crate) enum SchedulerCmd {
     Enqueue {
         request: Request,
         result_tx: oneshot::Sender<Result<DownloadResult, DownloadError>>,
@@ -46,14 +46,14 @@ pub enum SchedulerCmd {
     },
 }
 
-pub enum WorkerMsg {
+enum WorkerMsg {
     Finish {
         id: DownloadID,
         result: Result<DownloadResult, DownloadError>,
     },
 }
 
-pub struct Scheduler {
+pub(crate) struct Scheduler {
     ctx: Arc<Context>,
     tracker: TaskTracker,
 
@@ -85,7 +85,7 @@ impl Scheduler {
         }
     }
 
-    pub fn schedule(&mut self, job: Job) {
+    fn schedule(&mut self, job: Job) {
         let request = &job.request;
         let id = job.id();
         request.emit(DownloadEvent::Queued {
@@ -222,17 +222,17 @@ pub(crate) struct Job {
 }
 
 impl Job {
-    pub fn id(&self) -> DownloadID {
+    fn id(&self) -> DownloadID {
         self.request.id()
     }
 
-    pub fn send_result(self, result: Result<DownloadResult, DownloadError>) {
+    fn send_result(self, result: Result<DownloadResult, DownloadError>) {
         if let Some(result_tx) = self.result {
             let _ = result_tx.send(result);
         }
     }
 
-    pub fn fail(self, error: DownloadError) {
+    fn fail(self, error: DownloadError) {
         self.request.emit(DownloadEvent::Failed {
             id: self.id(),
             error: error.to_string(),
@@ -240,7 +240,7 @@ impl Job {
         self.send_result(Err(error));
     }
 
-    pub fn finish(self, result: DownloadResult) {
+    fn finish(self, result: DownloadResult) {
         self.request.emit(DownloadEvent::Completed {
             id: self.id(),
             path: result.path.clone(),
@@ -249,7 +249,7 @@ impl Job {
         self.send_result(Ok(result))
     }
 
-    pub fn retry(&self, delay: Duration) {
+    fn retry(&self, delay: Duration) {
         self.request.emit(DownloadEvent::Retrying {
             id: self.id(),
             attempt: self.attempt,
@@ -257,7 +257,7 @@ impl Job {
         });
     }
 
-    pub fn cancel(self) {
+    fn cancel(self) {
         self.request.cancel_token.cancel();
         self.request
             .emit(DownloadEvent::Cancelled { id: self.id() });
@@ -265,7 +265,7 @@ impl Job {
     }
 }
 
-pub async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Sender<WorkerMsg>) {
+async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Sender<WorkerMsg>) {
     let result = attempt_download(request.as_ref(), ctx.client.clone()).await;
 
     let _ = worker_tx

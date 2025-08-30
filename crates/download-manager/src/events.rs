@@ -62,7 +62,7 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn new(total_bytes: Option<u64>) -> Self {
+    pub(crate) fn new(total_bytes: Option<u64>) -> Self {
         let now = Instant::now();
         Progress {
             bytes_downloaded: 0,
@@ -79,17 +79,17 @@ impl Progress {
         }
     }
 
-    pub fn with_sample_interval(mut self, min_sample_interval: Duration) -> Self {
+    pub(crate) fn with_sample_interval(mut self, min_sample_interval: Duration) -> Self {
         self.min_sample_interval = min_sample_interval;
         self
     }
 
-    pub fn with_sample_bytes(mut self, min_sample_bytes: u64) -> Self {
+    pub(crate) fn with_sample_bytes(mut self, min_sample_bytes: u64) -> Self {
         self.min_sample_bytes = min_sample_bytes;
         self
     }
 
-    pub fn with_ema_alpha(mut self, ema_alpha: f64) -> Self {
+    pub(crate) fn with_ema_alpha(mut self, ema_alpha: f64) -> Self {
         self.ema_alpha = ema_alpha;
         self
     }
@@ -122,7 +122,7 @@ impl Progress {
         }
     }
 
-    pub fn update(&mut self, chunk_len: u64) -> bool {
+    pub(crate) fn update(&mut self, chunk_len: u64) -> bool {
         let now = Instant::now();
         self.bytes_downloaded += chunk_len;
         self.updated_at = now;
@@ -153,7 +153,7 @@ impl Progress {
         false
     }
 
-    pub fn force_update(&mut self) {
+    pub(crate) fn force_update(&mut self) {
         let now = Instant::now();
         let dt = now.duration_since(self.last_sample_at);
         let byte_delta = self.bytes_downloaded - self.last_sample_bytes;
