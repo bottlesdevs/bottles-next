@@ -22,6 +22,11 @@ pub enum DownloadError {
 }
 
 impl DownloadError {
+    /// Classify whether this error should be retried by the scheduler.
+    ///
+    /// Returns true for transient reqwest errors (timeout, connect, request) and HTTP 5xx.
+    /// If the HTTP status is unavailable, the error is treated as retryable by default.
+    /// Returns false for Cancelled, Io, and other non-transient variants.
     pub fn is_retryable(&self) -> bool {
         match self {
             Self::Network(network_err) => {
