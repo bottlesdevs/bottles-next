@@ -85,13 +85,24 @@ impl DownloadManager {
         Request::builder(self)
     }
 
+    /// Best-effort attempt to request cancellation for a download by ID.
+    ///
+    /// - No-op if the job is already finished or missing.
+    /// - Returns an error if the internal command channel is unavailable or the buffer is full.
+    pub fn try_cancel(&self, id: DownloadID) -> anyhow::Result<()> {
+        self.scheduler_tx
+            .try_send(SchedulerCmd::Cancel { id })
+            .map_err(|e| anyhow::anyhow!("Failed to send cancel command: {}", e))
+    }
+
     /// Request cancellation for a download by ID.
     ///
     /// - No-op if the job is already finished or missing.
     /// - Returns an error only if the internal command channel is unavailable.
-    pub fn cancel(&self, id: DownloadID) -> anyhow::Result<()> {
+    pub async fn cancel(&self, id: DownloadID) -> anyhow::Result<()> {
         self.scheduler_tx
-            .try_send(SchedulerCmd::Cancel { id })
+            .send(SchedulerCmd::Cancel { id })
+            .await
             .map_err(|e| anyhow::anyhow!("Failed to send cancel command: {}", e))
     }
 
