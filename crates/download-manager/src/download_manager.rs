@@ -43,6 +43,7 @@ pub struct DownloadManager {
     scheduler_tx: mpsc::Sender<SchedulerCmd>,
     ctx: Arc<Context>,
     tracker: TaskTracker,
+    shutdown_token: CancellationToken,
 }
 
 impl Default for DownloadManager {
@@ -132,7 +133,7 @@ impl DownloadManager {
     /// - Prevents new tasks from being scheduled and waits for all worker tasks to finish.
     /// Call this before dropping the manager if you need deterministic teardown.
     pub async fn shutdown(&self) {
-        self.cancel_all();
+        self.shutdown_token.cancel();
         self.tracker.close();
         self.tracker.wait().await;
     }
@@ -177,14 +178,17 @@ impl DownloadManagerBuilder {
         })?;
 
         let (cmd_tx, cmd_rx) = mpsc::channel(1024);
-        let ctx = Context::new(max_concurrent);
         let tracker = TaskTracker::new();
-        let scheduler = Scheduler::new(ctx.clone(), tracker.clone(), cmd_rx);
+        let shutdown_token = CancellationToken::new();
+        let ctx = Context::new(max_concurrent, shutdown_token.child_token());
+        let scheduler =
+            Scheduler::new(shutdown_token.clone(), ctx.clone(), tracker.clone(), cmd_rx);
 
         let manager = DownloadManager {
             scheduler_tx: cmd_tx,
             ctx: ctx.clone(),
             tracker: tracker.clone(),
+            shutdown_token,
         };
 
         tracker.spawn(async move { scheduler.run().await });

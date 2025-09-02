@@ -1,5 +1,5 @@
 use crate::{
-    Download, DownloadID, DownloadManager, Event, Progress, events::EventBus,
+    Download, DownloadID, DownloadManager, Event, Progress, error::DownloadError, events::EventBus,
     scheduler::SchedulerCmd,
 };
 use derive_builder::Builder;
@@ -210,6 +210,10 @@ impl RequestBuilder<'_> {
     /// Errors if url or destination are not set, or if the internal channel is unavailable.
     /// The returned handle implements [Future].
     pub fn start(self) -> anyhow::Result<Download> {
+        if self.manager.shutdown_token.is_cancelled() {
+            return Err(DownloadError::ManagerShutdown.into());
+        }
+
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
             .destination
