@@ -11,7 +11,7 @@ use tokio::{
     io::AsyncWriteExt,
     sync::{mpsc, oneshot},
 };
-use tokio_util::{task::TaskTracker, time::DelayQueue};
+use tokio_util::{sync::CancellationToken, task::TaskTracker, time::DelayQueue};
 
 use crate::{
     DownloadError, DownloadID, DownloadResult, Event, Progress, Request, context::Context,
@@ -56,6 +56,7 @@ enum WorkerMsg {
 pub(crate) struct Scheduler {
     ctx: Arc<Context>,
     tracker: TaskTracker,
+    shutdown_token: CancellationToken,
 
     cmd_rx: mpsc::Receiver<SchedulerCmd>,
     worker_tx: mpsc::Sender<WorkerMsg>,
@@ -68,6 +69,7 @@ pub(crate) struct Scheduler {
 
 impl Scheduler {
     pub fn new(
+        shutdown_token: CancellationToken,
         ctx: Arc<Context>,
         tracker: TaskTracker,
         cmd_rx: mpsc::Receiver<SchedulerCmd>,
@@ -76,6 +78,7 @@ impl Scheduler {
         Self {
             ctx,
             tracker,
+            shutdown_token,
             cmd_rx,
             worker_tx,
             worker_rx,
@@ -99,7 +102,6 @@ impl Scheduler {
 
     pub async fn run(mut self) {
         loop {
-            self.try_dispatch();
             tokio::select! {
                 Some(cmd) = self.cmd_rx.recv() => self.handle_cmd(cmd).await,
                 Some(msg) = self.worker_rx.recv() =>self.handle_worker_msg(msg).await,
@@ -108,9 +110,11 @@ impl Scheduler {
                         self.ready.push_back(exp.into_inner());
                     }
                 }
-                else => break,
+                _ = self.shutdown_token.cancelled() => break,
             }
+            self.try_dispatch();
         }
+        self.jobs.drain().for_each(|(_, job)| job.cancel());
     }
 
     async fn handle_worker_msg(&mut self, msg: WorkerMsg) {
@@ -189,6 +193,9 @@ impl Scheduler {
         }
 
         while let Some(id) = self.ready.pop_front() {
+            if self.shutdown_token.is_cancelled() {
+                return;
+            }
             let permit = match self.ctx.semaphore.clone().try_acquire_owned() {
                 Ok(p) => p,
                 Err(_) => {
@@ -277,14 +284,15 @@ async fn run(request: Arc<Request>, ctx: Arc<Context>, worker_tx: mpsc::Sender<W
 
 async fn probe_head(request: &Request, client: &Client) -> Option<RemoteInfo> {
     use reqwest::header;
-    let resp = client
+    let req = client
         .request(Method::HEAD, request.url().as_ref())
         .headers(request.config().headers().clone())
-        .send()
-        .await
-        .ok()?
-        .error_for_status()
-        .ok()?;
+        .send();
+
+    let resp = tokio::select! {
+        resp = req => resp.ok()?.error_for_status().ok()?,
+        _ = request.cancel_token.cancelled() => return None,
+    };
 
     let headers = resp.headers();
     let content_length = resp.content_length();
@@ -334,12 +342,15 @@ async fn attempt_download(
         });
     }
 
-    let mut response = client
+    let req = client
         .request(Method::GET, request.url().as_ref())
         .headers(request.config().headers().clone())
-        .send()
-        .await?
-        .error_for_status()?;
+        .send();
+
+    let mut response = tokio::select! {
+      resp = req => Ok(resp?.error_for_status()?),
+        _ = request.cancel_token.cancelled() =>  Err(DownloadError::Cancelled),
+    }?;
     let total_bytes = response.content_length();
 
     let mut file = File::create(request.destination()).await?;

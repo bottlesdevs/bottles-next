@@ -41,11 +41,11 @@ impl Context {
     /// - Initializes the semaphore with `max_concurrent` permits.
     /// - Creates a root [CancellationToken] and a broadcast channel (capacity 1024).
     /// - Constructs a shared [reqwest::Client].
-    pub fn new(max_concurrent: usize) -> Arc<Self> {
+    pub fn new(max_concurrent: usize, cancel_root: CancellationToken) -> Arc<Self> {
         Arc::new(Self {
             semaphore: Arc::new(Semaphore::new(max_concurrent)),
             max_concurrent: AtomicUsize::new(max_concurrent),
-            cancel_root: CancellationToken::new(),
+            cancel_root,
             active: AtomicUsize::new(0),
             id_counter: AtomicU64::new(1),
             client: Client::new(),
