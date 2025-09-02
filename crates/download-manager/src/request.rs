@@ -29,8 +29,8 @@ pub struct Request {
     progress: watch::Sender<Progress>,
     events: EventBus,
 
-    pub(crate) on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
-    pub(crate) on_event: Option<Arc<Box<dyn Fn(Event) + Send + Sync>>>,
+    pub(crate) on_progress: Option<Arc<dyn Fn(Progress) + Send + Sync>>,
+    pub(crate) on_event: Option<Arc<dyn Fn(Event) + Send + Sync>>,
 
     pub cancel_token: CancellationToken,
 }
@@ -137,8 +137,8 @@ pub struct RequestBuilder<'a> {
     destination: Option<PathBuf>,
     config: DownloadConfigBuilder,
 
-    on_progress: Option<Arc<Box<dyn Fn(Progress) + Send + Sync>>>,
-    on_event: Option<Arc<Box<dyn Fn(Event) + Send + Sync>>>,
+    on_progress: Option<Arc<dyn Fn(Progress) + Send + Sync>>,
+    on_event: Option<Arc<dyn Fn(Event) + Send + Sync>>,
 
     manager: &'a DownloadManager,
 }
@@ -190,7 +190,7 @@ impl RequestBuilder<'_> {
     where
         F: Fn(Progress) + Send + Sync + 'static,
     {
-        self.on_progress = Some(Arc::new(Box::new(callback)));
+        self.on_progress = Some(Arc::new(callback));
         self
     }
 
@@ -201,7 +201,7 @@ impl RequestBuilder<'_> {
     where
         F: Fn(Event) + Send + Sync + 'static,
     {
-        self.on_event = Some(Arc::new(Box::new(callback)));
+        self.on_event = Some(Arc::new(callback));
         self
     }
 
