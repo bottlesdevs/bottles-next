@@ -4,6 +4,8 @@ mod error;
 mod events;
 mod request;
 mod scheduler;
+mod worker;
+
 pub mod prelude {
     pub use crate::{
         context::DownloadID,
