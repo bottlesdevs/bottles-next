@@ -74,7 +74,7 @@ impl DownloadManager {
     pub fn download(&self, url: Url, destination: impl AsRef<Path>) -> anyhow::Result<Download> {
         self.download_builder()
             .url(url)
-            .destination(destination)
+            .destination(destination.as_ref())
             .start()
     }
 

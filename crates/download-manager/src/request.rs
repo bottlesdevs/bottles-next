@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tokio::sync::{oneshot, watch};
+use tokio::sync::{mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 /// Immutable description of a single download request.
@@ -19,20 +19,36 @@ use tokio_util::sync::CancellationToken;
 /// Built by [RequestBuilder] and executed by the scheduler. Holds destination,
 /// headers, retry policy, and user callbacks. Most users should prefer creating
 /// requests via [DownloadManager::download_builder()].
-#[derive(Clone)]
+#[derive(Clone, Builder)]
+#[builder(pattern = "owned")]
+#[builder(build_fn(skip))]
 pub struct Request {
+    #[builder(field(ty = "DownloadID"))]
     id: DownloadID,
     url: Url,
+    #[builder(setter(into))]
     destination: PathBuf,
+    #[builder(field(ty = "DownloadConfigBuilder"))]
     config: DownloadConfig,
 
     progress: watch::Sender<Progress>,
     events: EventBus,
 
+    #[builder(
+        field(ty = "Option<Arc<dyn Fn(Progress) + Send + Sync>>"),
+        setter(strip_option)
+    )]
     pub(crate) on_progress: Option<Arc<dyn Fn(Progress) + Send + Sync>>,
+    #[builder(
+        field(ty = "Option<Arc<dyn Fn(Event) + Send + Sync>>"),
+        setter(strip_option)
+    )]
     pub(crate) on_event: Option<Arc<dyn Fn(Event) + Send + Sync>>,
 
     pub cancel_token: CancellationToken,
+
+    #[builder(field(ty = "Option<mpsc::Sender<SchedulerCmd>>"), setter(custom))]
+    _sched_tx: (),
 }
 
 /// Per-request configuration for retries, overwrite behavior, and headers.
@@ -90,14 +106,18 @@ impl DownloadConfig {
 }
 
 impl Request {
-    pub fn builder<'a>(manager: &'a DownloadManager) -> RequestBuilder<'a> {
+    pub fn builder(manager: &DownloadManager) -> RequestBuilder {
         RequestBuilder {
+            id: manager.ctx.next_id(),
             url: None,
             destination: None,
             config: DownloadConfigBuilder::default(),
+            progress: None,
             on_progress: None,
             on_event: None,
-            manager,
+            events: Some(manager.ctx.events.clone()),
+            cancel_token: Some(manager.child_token()),
+            _sched_tx: Some(manager.scheduler_tx.clone()),
         }
     }
 
@@ -129,35 +149,7 @@ impl Request {
     }
 }
 
-/// Builder for Request. Configure URL, destination, headers, retries, overwrite, and callbacks.
-///
-/// After configuration, call [RequestBuilder::start()] to enqueue the download and obtain a [Download] handle.
-pub struct RequestBuilder<'a> {
-    url: Option<Url>,
-    destination: Option<PathBuf>,
-    config: DownloadConfigBuilder,
-
-    on_progress: Option<Arc<dyn Fn(Progress) + Send + Sync>>,
-    on_event: Option<Arc<dyn Fn(Event) + Send + Sync>>,
-
-    manager: &'a DownloadManager,
-}
-
-impl RequestBuilder<'_> {
-    /// Set the source URL for the download.
-    pub fn url(mut self, url: Url) -> Self {
-        self.url = Some(url);
-        self
-    }
-
-    /// Set the destination path. Parent directories are created when starting.
-    ///
-    /// If overwrite is false and the file exists, start() will error.
-    pub fn destination(mut self, destination: impl AsRef<Path>) -> Self {
-        self.destination = Some(destination.as_ref().to_path_buf());
-        self
-    }
-
+impl RequestBuilder {
     /// Set the maximum retry attempts for retryable network errors.
     pub fn retries(mut self, retries: u32) -> Self {
         self.config = self.config.retries(retries);
@@ -183,34 +175,9 @@ impl RequestBuilder<'_> {
         self
     }
 
-    /// Register a callback invoked when sampled Progress updates are produced.
-    ///
-    /// Called on async worker context; keep the callback lightweight.
-    pub fn on_progress<F>(mut self, callback: F) -> Self
-    where
-        F: Fn(Progress) + Send + Sync + 'static,
-    {
-        self.on_progress = Some(Arc::new(callback));
-        self
-    }
-
-    /// Register a callback for per-download DownloadEvent notifications.
-    ///
-    /// Called for events emitted for this request only.
-    pub fn on_event<F>(mut self, callback: F) -> Self
-    where
-        F: Fn(Event) + Send + Sync + 'static,
-    {
-        self.on_event = Some(Arc::new(callback));
-        self
-    }
-
-    /// Finalize the request, enqueue it, and return a Download handle.
-    ///
-    /// Errors if url or destination are not set, or if the internal channel is unavailable.
-    /// The returned handle implements [Future].
     pub fn start(self) -> anyhow::Result<Download> {
-        if self.manager.shutdown_token.is_cancelled() {
+        let cancel_token = self.cancel_token.expect("Cancel token must be set");
+        if cancel_token.is_cancelled() {
             return Err(DownloadError::ManagerShutdown.into());
         }
 
@@ -220,15 +187,11 @@ impl RequestBuilder<'_> {
             .ok_or_else(|| anyhow::anyhow!("Destination must be set"))?;
         let config = self.config.build()?;
 
-        let id = self.manager.ctx.next_id();
         let (result_tx, result_rx) = oneshot::channel();
         let (progress_tx, progress_rx) = watch::channel(Progress::new(None));
-        let cancel_token = self.manager.child_token();
-        let event_bus = self.manager.ctx.events.clone();
-        let event_rx = event_bus.subscribe();
-
-        let on_progress = self.on_progress;
-        let on_event = self.on_event;
+        let events = self.events.unwrap();
+        let event_rx = events.subscribe();
+        let id = self.id;
 
         let request = Request {
             id,
@@ -236,17 +199,18 @@ impl RequestBuilder<'_> {
             destination: destination.clone(),
             config,
 
-            on_progress,
-            on_event,
+            on_progress: self.on_progress,
+            on_event: self.on_event,
 
-            events: event_bus,
+            events,
             progress: progress_tx,
             cancel_token: cancel_token.clone(),
+
+            _sched_tx: (),
         };
 
-        self.manager
-            .scheduler_tx
-            .try_send(SchedulerCmd::Enqueue { request, result_tx })?;
+        let sched_tx = self._sched_tx.expect("sched_tx must be set");
+        sched_tx.try_send(SchedulerCmd::Enqueue { request, result_tx })?;
 
         Ok(Download::new(
             id,
