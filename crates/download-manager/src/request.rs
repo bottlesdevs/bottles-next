@@ -80,11 +80,7 @@ impl DownloadConfigBuilder {
 
 impl Default for DownloadConfig {
     fn default() -> Self {
-        DownloadConfig {
-            retries: 3,
-            overwrite: false,
-            headers: HeaderMap::new(),
-        }
+        DownloadConfigBuilder::default().build().unwrap()
     }
 }
 
