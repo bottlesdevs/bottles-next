@@ -21,12 +21,14 @@ use crate::{
     request::RequestBuilder,
     scheduler::{Scheduler, SchedulerCmd},
 };
+use derive_builder::Builder;
 use futures_core::Stream;
 use prelude::*;
 use reqwest::Url;
 use std::{
     path::Path,
     sync::{Arc, atomic::Ordering},
+    time::Duration,
 };
 use tokio::sync::{broadcast, mpsc};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
@@ -50,10 +52,7 @@ pub struct DownloadManager {
 
 impl Default for DownloadManager {
     fn default() -> Self {
-        DownloadManager::builder()
-            .max_concurrent(3)
-            .build()
-            .unwrap()
+        DownloadManager::with_config(DownloadManagerConfig::default())
     }
 }
 
@@ -62,8 +61,24 @@ impl DownloadManager {
     ///
     /// You must set a positive max_concurrent on the builder before build().
     /// If you want a sensible default quickly, see [DownloadManager::default()].
-    pub fn builder() -> DownloadManagerBuilder {
-        DownloadManagerBuilder::new()
+    pub fn with_config(config: DownloadManagerConfig) -> DownloadManager {
+        let (cmd_tx, cmd_rx) = mpsc::channel(1024);
+        let tracker = TaskTracker::new();
+        let shutdown_token = CancellationToken::new();
+        let ctx = Context::new(config, shutdown_token.child_token());
+        let scheduler =
+            Scheduler::new(shutdown_token.clone(), ctx.clone(), tracker.clone(), cmd_rx);
+
+        let manager = DownloadManager {
+            scheduler_tx: cmd_tx,
+            ctx: ctx.clone(),
+            tracker: tracker.clone(),
+            shutdown_token,
+        };
+
+        tracker.spawn(async move { scheduler.run().await });
+
+        manager
     }
 
     /// Start a download with default request settings.
@@ -152,60 +167,26 @@ impl DownloadManager {
     }
 }
 
-/// Builder for DownloadManager.
-///
-/// Requirements
-/// - You must set a positive `max_concurrent` before [DownloadManagerBuilder::build()]; otherwise it will fails.
-///
-/// Notes
-/// - [DownloadManagerBuilder::build()] spawns the internal scheduler onto the current Tokio runtime.
-pub struct DownloadManagerBuilder {
-    max_concurrent: Option<usize>,
+#[derive(Builder)]
+pub struct DownloadManagerConfig {
+    #[builder(default = 3, setter(custom))]
+    max_concurrent: usize,
 }
 
-impl DownloadManagerBuilder {
-    /// Create a new builder with no defaults applied.
-    ///
-    /// You must call [DownloadManagerBuilder::max_concurrent()] before [DownloadManagerBuilder::build()].
-    pub fn new() -> Self {
-        Self {
-            max_concurrent: None,
-        }
+impl Default for DownloadManagerConfig {
+    fn default() -> Self {
+        DownloadManagerConfigBuilder::default().build().unwrap()
     }
+}
 
-    /// Set the maximum number of concurrent downloads allowed.
-    ///
-    /// Must be greater than zero. This limit applies across the entire manager.
-    pub fn max_concurrent(mut self, max: usize) -> Self {
-        self.max_concurrent = Some(max);
-        self
-    }
+impl DownloadManagerConfigBuilder {
+    fn max_concurrent(&mut self, value: usize) -> anyhow::Result<&mut Self> {
+        let value = (value != 0).then(|| value).ok_or(anyhow::anyhow!(
+            "Max concurrent downloads must be set and greater than 0"
+        ))?;
 
-    /// Build and start the [DownloadManager].
-    ///
-    /// Spawns the scheduler task and returns a ready-to-use manager.
-    /// Fails if max_concurrent is not set or is zero.
-    pub fn build(self) -> anyhow::Result<DownloadManager> {
-        let max_concurrent = self.max_concurrent.filter(|&n| n > 0).ok_or_else(|| {
-            anyhow::anyhow!("Max concurrent downloads must be set and greater than 0")
-        })?;
+        self.max_concurrent = Some(value);
 
-        let (cmd_tx, cmd_rx) = mpsc::channel(1024);
-        let tracker = TaskTracker::new();
-        let shutdown_token = CancellationToken::new();
-        let ctx = Context::new(max_concurrent, shutdown_token.child_token());
-        let scheduler =
-            Scheduler::new(shutdown_token.clone(), ctx.clone(), tracker.clone(), cmd_rx);
-
-        let manager = DownloadManager {
-            scheduler_tx: cmd_tx,
-            ctx: ctx.clone(),
-            tracker: tracker.clone(),
-            shutdown_token,
-        };
-
-        tracker.spawn(async move { scheduler.run().await });
-
-        Ok(manager)
+        Ok(self)
     }
 }
