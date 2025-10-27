@@ -4,6 +4,7 @@ use reqwest::Url;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
+use tracing::{debug, warn};
 
 #[derive(Debug, Clone)]
 pub(crate) struct EventBus(broadcast::Sender<Event>);
@@ -22,12 +23,22 @@ impl EventBus {
         use tokio_stream::StreamExt as _;
         use tokio_stream::wrappers::BroadcastStream;
 
-        BroadcastStream::new(self.subscribe()).filter_map(|res| res.ok())
+        debug!("Creating broadcast events stream");
+        BroadcastStream::new(self.subscribe()).filter_map(|res| match res {
+            Ok(event) => Some(event),
+            Err(e) => {
+                warn!(error = %e, "Event receiver lagged or closed; dropping event");
+                None
+            }
+        })
     }
 
     pub fn send(&self, event: Event) {
-        // TODO: Log the error
-        let _ = self.0.send(event);
+        if let Err(e) = self.0.send(event.clone()) {
+            warn!(error = %e, event = %event, "Failed to publish event to broadcast channel");
+        } else {
+            debug!(event = %event, "Published event");
+        }
     }
 }
 

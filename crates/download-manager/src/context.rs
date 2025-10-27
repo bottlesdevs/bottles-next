@@ -5,6 +5,7 @@ use std::sync::{
 };
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
+use tracing::info;
 
 use crate::{DownloadManagerConfig, events::EventBus};
 
@@ -42,7 +43,7 @@ impl Context {
     /// - Creates a root [CancellationToken] and a broadcast channel (capacity 1024).
     /// - Constructs a shared [reqwest::Client].
     pub fn new(config: DownloadManagerConfig, cancel_root: CancellationToken) -> Arc<Self> {
-        Arc::new(Self {
+        let ctx = Arc::new(Self {
             semaphore: Arc::new(Semaphore::new(config.max_concurrent)),
             max_concurrent: AtomicUsize::new(config.max_concurrent),
             cancel_root,
@@ -50,7 +51,12 @@ impl Context {
             id_counter: AtomicU64::new(1),
             client: Client::new(),
             events: EventBus::new(),
-        })
+        });
+        info!(
+            max_concurrent = config.max_concurrent,
+            "Context initialized"
+        );
+        ctx
     }
 
     /// Atomically generate the next [DownloadID] (relaxed ordering).

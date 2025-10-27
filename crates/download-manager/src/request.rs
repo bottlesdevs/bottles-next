@@ -13,6 +13,7 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
+use tracing::{debug, instrument, trace};
 
 /// Immutable description of a single download request.
 ///
@@ -134,11 +135,13 @@ impl Request {
     }
 
     pub fn emit(&self, event: Event) {
+        debug!(id = %self.id, event = %event, "Emitting event");
         self.events.send(event.clone());
         self.on_event.as_ref().map(|cb| cb(event));
     }
 
     pub fn update_progress(&self, progress: Progress) {
+        trace!(id = %self.id, "Updating progress");
         // TODO: Log the error
         let _ = self.progress.send(progress);
         self.on_progress.as_ref().map(|cb| cb(progress));
@@ -171,6 +174,7 @@ impl RequestBuilder {
         self
     }
 
+    #[instrument(level = "info", skip(self))]
     pub fn start(self) -> anyhow::Result<Download> {
         let cancel_token = self.cancel_token.expect("Cancel token must be set");
         if cancel_token.is_cancelled() {
@@ -206,6 +210,7 @@ impl RequestBuilder {
         };
 
         let sched_tx = self._sched_tx.expect("sched_tx must be set");
+        debug!(id = %id, url = %url, destination = ?destination, "Enqueuing download request");
         sched_tx.try_send(SchedulerCmd::Enqueue { request, result_tx })?;
 
         Ok(Download::new(

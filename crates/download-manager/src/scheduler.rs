@@ -7,6 +7,7 @@ use std::{
 use futures_util::StreamExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::{sync::CancellationToken, task::TaskTracker, time::DelayQueue};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::{
     DownloadError, DownloadID, DownloadResult, Event, Request,
@@ -57,6 +58,7 @@ pub(crate) struct Scheduler {
 }
 
 impl Scheduler {
+    #[instrument(level = "info", skip(ctx, tracker, cmd_rx, shutdown_token))]
     pub fn new(
         shutdown_token: CancellationToken,
         ctx: Arc<Context>,
@@ -85,10 +87,12 @@ impl Scheduler {
             url: request.url().clone(),
             destination: request.destination().to_path_buf(),
         });
+        debug!(%id, url = %request.url(), destination = ?request.destination(), "Job queued");
         self.jobs.insert(id, job);
         self.ready.push_back(id);
     }
 
+    #[instrument(level = "info", skip(self))]
     pub async fn run(mut self) {
         loop {
             tokio::select! {
@@ -99,13 +103,18 @@ impl Scheduler {
                         self.ready.push_back(exp.into_inner());
                     }
                 }
-                _ = self.shutdown_token.cancelled() => break,
+                _ = self.shutdown_token.cancelled() => {
+                    info!("Scheduler shutdown requested");
+                    break;
+                },
             }
             self.try_dispatch();
         }
+        info!("Cancelling remaining jobs");
         self.jobs.drain().for_each(|(_, job)| job.cancel());
     }
 
+    #[instrument(level = "debug", skip(self, msg))]
     async fn handle_worker_msg(&mut self, msg: WorkerMsg) {
         match msg {
             WorkerMsg::Finish { id, result } => match result {
@@ -113,12 +122,14 @@ impl Scheduler {
                     let Some(job) = self.jobs.remove(&id) else {
                         return;
                     };
+                    info!(%id, "Job completed successfully");
                     job.finish(result)
                 }
                 Err(DownloadError::Cancelled) => {
                     let Some(job) = self.jobs.remove(&id) else {
                         return;
                     };
+                    warn!(%id, "Job cancelled");
                     job.cancel()
                 }
                 Err(error) if error.is_retryable() => {
@@ -126,11 +137,13 @@ impl Scheduler {
                         return;
                     };
                     if job.attempt >= job.request.config().retries() {
+                        warn!(%id, attempt = job.attempt, retries = job.request.config().retries(), error = %error, "Retry limit exceeded; failing job");
                         self.jobs.remove(&id).map(|job| job.fail(error));
                         return;
                     }
                     let delay = BACKOFF_STRATEGY.next_delay(job.attempt);
                     job.attempt += 1;
+                    warn!(%id, attempt = job.attempt, delay_ms = delay.as_millis(), error = %error, "Retryable error; scheduling retry");
                     job.retry(delay);
                     self.delayed.insert(id, delay);
                 }
@@ -138,15 +151,19 @@ impl Scheduler {
                     let Some(entry) = self.jobs.remove(&id) else {
                         return;
                     };
+                    error!(%id, error = %error, "Job failed with non-retryable error");
                     entry.fail(error)
                 }
             },
         }
     }
 
+    #[instrument(level = "debug", skip(self, cmd))]
     async fn handle_cmd(&mut self, cmd: SchedulerCmd) {
         match cmd {
             SchedulerCmd::Enqueue { request, result_tx } => {
+                let id = request.id();
+                debug!(%id, url = %request.url(), destination = ?request.destination(), "Enqueue request");
                 self.schedule(Job {
                     request: Arc::new(request),
                     result: Some(result_tx),
@@ -154,11 +171,13 @@ impl Scheduler {
                 });
             }
             SchedulerCmd::Cancel { id } => {
+                info!(%id, "Received cancel command");
                 self.jobs.remove(&id).map(|job| job.cancel());
             }
         }
     }
 
+    #[instrument(level = "trace", skip(self))]
     fn try_dispatch(&mut self) {
         struct ActiveGuard {
             ctx: Arc<Context>,
@@ -189,6 +208,7 @@ impl Scheduler {
                 Ok(p) => p,
                 Err(_) => {
                     // No permits left; put the job back to the front and stop dispatching for now.
+                    trace!(%id, "No semaphore permits available; requeuing to front");
                     self.ready.push_front(id);
                     return;
                 }
@@ -196,6 +216,7 @@ impl Scheduler {
 
             let Some(entry) = self.jobs.get_mut(&id) else {
                 drop(permit);
+                trace!(%id, "Job not found when dispatching");
                 continue;
             };
 
@@ -203,6 +224,7 @@ impl Scheduler {
             let ctx = self.ctx.clone();
             let worker_tx = self.worker_tx.clone();
 
+            info!(%id, "Dispatching job to worker");
             self.tracker.spawn(async move {
                 let _guard = ActiveGuard::new(ctx.clone(), permit);
                 run(request, ctx, worker_tx).await;
