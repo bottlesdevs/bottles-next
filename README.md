@@ -15,6 +15,12 @@ This project contains the following submodules:
 - [next-winebridge](https://github.com/bottlesdevs/next-winebridge)
 - [next-docs](https://github.com/bottlesdevs/next-docs)
 
+# Dependencies
+
+- rust toolchain
+- rustup target add x86_64-pc-windows-gnu
+- mingw64-gcc and mingw64-binutils
+
 # Build
 To build the project, you can use the `just` command:
 
