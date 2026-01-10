@@ -13,3 +13,6 @@
 [submodule "next-docs"]
 	path = crates/next-docs
 	url = https://github.com/bottlesdevs/next-docs
+[submodule "crates/next-config"]
+	path = crates/next-config
+	url = https://github.com/bottlesdevs/next-config.git

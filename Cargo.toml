@@ -1,7 +1,7 @@
 [workspace.package]
 version = "0.1.0"
 description = "Bottles Next is the evolution of Bottles"
-authors = ["Eduardo Flores <edfloreshz@proton.me"]
+authors = ["Eduardo Flores <edfloreshz@proton.me", "Inam Ul Haq <inam123451@gmail.com>"]
 edition = "2024"
 license = "GPL-3.0"
 repository = "https://github.com/bottlesdevs/bottles-next"
@@ -16,6 +16,7 @@ members = [
     "crates/download-manager",
     "crates/next-cli",
     "crates/next-core",
+    "crates/next-config",
     "crates/next-server",
     "crates/next-winebridge",
 ]
@@ -23,7 +24,9 @@ resolver = "2"
 
 [workspace.dependencies]
 bottles-core = { path = "crates/next-core" }
+next-config = { path = "crates/next-config" }
 serde = { version = "1.0", features = ["derive"] }
+serde-value = "0.7"
 serde_json = "1.0"
 thiserror = "2.0"
 tracing = "0.1"
@@ -38,3 +41,4 @@ anyhow = "1.0"
 futures-core = "0.3"
 futures-util = "0.3"
 derive_builder = "0.20"
+inventory = "0.3"
