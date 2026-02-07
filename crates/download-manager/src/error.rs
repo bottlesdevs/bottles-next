@@ -10,6 +10,8 @@ pub enum DownloadError {
     Io(#[from] std::io::Error),
     #[error("Download was cancelled")]
     Cancelled,
+    #[error("Download was paused")]
+    Paused,
     #[error("Retry limit exceeded: {last_error}")]
     RetriesExhausted { last_error: Box<DownloadError> },
     #[error("Download manager has been shut down")]
@@ -27,7 +29,7 @@ impl DownloadError {
     ///
     /// Returns true for transient reqwest errors (timeout, connect, request) and HTTP 5xx.
     /// If the HTTP status is unavailable, the error is treated as retryable by default.
-    /// Returns false for Cancelled, Io, and other non-transient variants.
+    /// Returns false for Cancelled, Paused, Io, and other non-transient variants.
     #[instrument(level = "trace", skip(self))]
     pub fn is_retryable(&self) -> bool {
         match self {
@@ -40,7 +42,7 @@ impl DownloadError {
                         .map(|status_code| status_code.is_server_error())
                         .unwrap_or(true)
             }
-            Self::Cancelled | Self::Io(_) => false,
+            Self::Cancelled | Self::Io(_) | Self::Paused => false,
             _ => false,
         }
     }

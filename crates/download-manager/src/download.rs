@@ -1,7 +1,10 @@
 use crate::{DownloadError, DownloadID, Event, Progress};
 use futures_core::Stream;
-use std::path::PathBuf;
-use tokio::sync::{broadcast, oneshot, watch};
+use std::path::{Path, PathBuf};
+use tokio::{
+    io,
+    sync::{broadcast, oneshot, watch},
+};
 use tokio_stream::wrappers::{BroadcastStream, WatchStream};
 use tokio_util::sync::CancellationToken;
 
@@ -18,6 +21,7 @@ pub struct Download {
     result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
 
     cancel_token: CancellationToken,
+    pause_token: CancellationToken,
 }
 
 impl Download {
@@ -27,6 +31,7 @@ impl Download {
         events: broadcast::Receiver<Event>,
         result: oneshot::Receiver<Result<DownloadResult, DownloadError>>,
         cancel_token: CancellationToken,
+        pause_token: CancellationToken,
     ) -> Self {
         Download {
             id,
@@ -34,6 +39,7 @@ impl Download {
             events,
             result,
             cancel_token,
+            pause_token,
         }
     }
 
@@ -48,6 +54,14 @@ impl Download {
     /// written file. Cancellation is best-effort and may race with completion.
     pub fn cancel(&self) {
         self.cancel_token.cancel();
+    }
+
+    /// Request cooperative pause of this download.
+    ///
+    /// The worker observes the pause token and will stop downloading, preserving the partial
+    /// file and metadata for resume. This is cooperative: the worker may pause at a safe point.
+    pub fn pause(&self) {
+        self.pause_token.cancel();
     }
 
     pub fn progress_raw(&self) -> watch::Receiver<Progress> {
@@ -80,7 +94,8 @@ impl Download {
                     | Event::Retrying { id, .. }
                     | Event::Completed { id, .. }
                     | Event::Failed { id, .. }
-                    | Event::Cancelled { id, .. } => *id == download_id,
+                    | Event::Cancelled { id, .. }
+                    | Event::Paused { id, .. } => *id == download_id,
                 };
 
                 matches
@@ -118,7 +133,42 @@ pub struct DownloadResult {
 pub struct RemoteInfo {
     pub content_length: Option<u64>,
     pub accept_ranges: Option<String>,
+    pub meta: CacheMeta,
+    pub content_type: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CacheMeta {
     pub etag: Option<String>,
     pub last_modified: Option<String>,
-    pub content_type: Option<String>,
+}
+
+impl CacheMeta {
+    /// Returns the path to the metadata file stored alongside the destination.
+    /// Uses a `.meta` suffix appended to the filename (e.g. `foo.tar.gz` -> `foo.tar.gz.meta`).
+    pub fn meta_path(path: impl AsRef<Path>) -> PathBuf {
+        path.as_ref().with_added_extension("meta")
+    }
+
+    /// Load metadata if present and valid JSON. Returns `None` when the file is absent
+    /// or when the file contains invalid JSON (in which case the invalid file is removed).
+    pub async fn load(path: impl AsRef<Path>) -> Option<Self> {
+        let path = Self::meta_path(path);
+        let meta_content = tokio::fs::read_to_string(&path).await.ok()?;
+        match serde_json::from_str::<Self>(&meta_content) {
+            Ok(meta) => Some(meta),
+            Err(_) => {
+                // If the metadata file is corrupted, remove it and treat as absent.
+                let _ = tokio::fs::remove_file(&path).await;
+                None
+            }
+        }
+    }
+
+    pub async fn save(&self, path: impl AsRef<Path>) -> Result<(), io::Error> {
+        let path = Self::meta_path(path);
+        let meta_content = serde_json::to_string(self)?;
+        tokio::fs::write(path, meta_content).await?;
+        Ok(())
+    }
 }

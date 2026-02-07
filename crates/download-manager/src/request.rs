@@ -47,6 +47,7 @@ pub struct Request {
     pub(crate) on_event: Option<Arc<dyn Fn(Event) + Send + Sync>>,
 
     pub cancel_token: CancellationToken,
+    pub pause_token: CancellationToken,
 
     #[builder(field(ty = "Option<mpsc::Sender<SchedulerCmd>>"), setter(custom))]
     _sched_tx: (),
@@ -114,6 +115,7 @@ impl Request {
             on_event: None,
             events: Some(manager.ctx.events.clone()),
             cancel_token: Some(manager.child_token()),
+            pause_token: Some(manager.child_token()),
             _sched_tx: Some(manager.scheduler_tx.clone()),
         }
     }
@@ -145,6 +147,22 @@ impl Request {
         // TODO: Log the error
         let _ = self.progress.send(progress);
         self.on_progress.as_ref().map(|cb| cb(progress));
+    }
+
+    /// Create a clone of this `Request` but use the provided cancellation and pause tokens.
+    ///
+    /// Useful for re-enqueuing an existing request (for example on resume) without requiring the
+    /// caller to rebuild the whole request (url/destination/etc). The returned `Request` is a full
+    /// clone with the only difference being the two tokens.
+    pub fn with_tokens(
+        &self,
+        cancel_token: CancellationToken,
+        pause_token: CancellationToken,
+    ) -> Request {
+        let mut req = self.clone();
+        req.cancel_token = cancel_token;
+        req.pause_token = pause_token;
+        req
     }
 }
 
@@ -181,6 +199,11 @@ impl RequestBuilder {
             return Err(DownloadError::ManagerShutdown.into());
         }
 
+        let pause_token = self.pause_token.expect("Pause token must be set");
+        if pause_token.is_cancelled() {
+            return Err(DownloadError::Paused.into());
+        }
+
         let url = self.url.ok_or_else(|| anyhow::anyhow!("URL must be set"))?;
         let destination = self
             .destination
@@ -205,6 +228,7 @@ impl RequestBuilder {
             events,
             progress: progress_tx,
             cancel_token: cancel_token.clone(),
+            pause_token: pause_token.clone(),
 
             _sched_tx: (),
         };
@@ -219,6 +243,7 @@ impl RequestBuilder {
             event_rx,
             result_rx,
             cancel_token,
+            pause_token,
         ))
     }
 }

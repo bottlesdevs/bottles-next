@@ -43,6 +43,7 @@ use tracing::{debug, info, instrument, trace, warn};
 /// - Events are delivered over a broadcast channel with a bounded buffer; slow consumers can miss events.
 /// - Use events() to get a fallible-safe stream that drops lagged messages.
 /// - Use shutdown() for a graceful stop: it cancels all work and waits for workers to finish.
+#[derive(Clone)]
 pub struct DownloadManager {
     scheduler_tx: mpsc::Sender<SchedulerCmd>,
     ctx: Arc<Context>,
@@ -153,6 +154,70 @@ impl DownloadManager {
         let n = self.ctx.active.load(Ordering::Relaxed);
         trace!(active = n, "Active downloads");
         n
+    }
+
+    /// Best-effort attempt to request a pause for a download by ID.
+    ///
+    /// - No-op if the job is already finished or missing.
+    /// - Returns an error if the internal command channel is unavailable or the buffer is full.
+    #[instrument(level = "info", skip(self), fields(id = id))]
+    pub fn try_pause(&self, id: DownloadID) -> anyhow::Result<()> {
+        match self.scheduler_tx.try_send(SchedulerCmd::Pause { id }) {
+            Ok(_) => {
+                debug!(%id, "Pause command enqueued (try_pause)");
+                Ok(())
+            }
+            Err(e) => {
+                warn!(%id, error = %e, "Failed to send pause command with try_pause");
+                Err(anyhow::anyhow!("Failed to send pause command: {}", e))
+            }
+        }
+    }
+
+    /// Request a pause for a download by ID.
+    ///
+    /// - No-op if the job is already finished or missing.
+    /// - Returns an error only if the internal command channel is unavailable.
+    #[instrument(level = "info", skip(self), fields(id = id))]
+    pub async fn pause(&self, id: DownloadID) -> anyhow::Result<()> {
+        match self.scheduler_tx.send(SchedulerCmd::Pause { id }).await {
+            Ok(_) => {
+                debug!(%id, "Pause command enqueued");
+                Ok(())
+            }
+            Err(e) => {
+                warn!(%id, error = %e, "Failed to send pause command");
+                Err(anyhow::anyhow!("Failed to send pause command: {}", e))
+            }
+        }
+    }
+
+    #[instrument(level = "info", skip(self), fields(id = id))]
+    pub fn try_resume(&self, id: DownloadID) -> anyhow::Result<()> {
+        match self.scheduler_tx.try_send(SchedulerCmd::Resume { id }) {
+            Ok(_) => {
+                debug!(%id, "Resume command enqueued (try_resume)");
+                Ok(())
+            }
+            Err(e) => {
+                warn!(%id, error = %e, "Failed to send resume command with try_resume");
+                Err(anyhow::anyhow!("Failed to send resume command: {}", e))
+            }
+        }
+    }
+
+    #[instrument(level = "info", skip(self), fields(id = id))]
+    pub async fn resume(&self, id: DownloadID) -> anyhow::Result<()> {
+        match self.scheduler_tx.send(SchedulerCmd::Resume { id }).await {
+            Ok(_) => {
+                debug!(%id, "Resume command sent");
+                Ok(())
+            }
+            Err(e) => {
+                warn!(%id, error = %e, "Failed to send resume command");
+                Err(anyhow::anyhow!("Failed to send resume command: {}", e))
+            }
+        }
     }
 
     /// Cancel all queued and in-flight downloads managed by this instance.

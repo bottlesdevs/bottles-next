@@ -76,6 +76,9 @@ pub enum Event {
     Cancelled {
         id: DownloadID,
     },
+    Paused {
+        id: DownloadID,
+    },
 }
 
 impl std::fmt::Display for Event {
@@ -85,6 +88,7 @@ impl std::fmt::Display for Event {
             Event::Probed { id, info } => write!(f, "[{}] Probed: {:?}", id, info),
             Event::Failed { id, error } => write!(f, "[{}] Failed: {}", id, error),
             Event::Cancelled { id } => write!(f, "[{}] Cancelled", id),
+            Event::Paused { id } => write!(f, "[{}] Paused", id),
             Event::Started {
                 id, total_bytes, ..
             } => {
@@ -157,6 +161,13 @@ impl Progress {
             min_sample_bytes: 64 * 1024, // 64 KiB
             min_sample_interval: Duration::from_millis(200),
         }
+    }
+
+    pub(crate) fn resume(mut self, bytes_downloaded: u64) -> Self {
+        self.bytes_downloaded = bytes_downloaded;
+        self.last_sample_bytes = bytes_downloaded;
+        self.last_sample_at = Instant::now();
+        self
     }
 
     pub(crate) fn with_sample_interval(mut self, min_sample_interval: Duration) -> Self {

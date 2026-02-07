@@ -41,6 +41,12 @@ pub(crate) enum SchedulerCmd {
     Cancel {
         id: DownloadID,
     },
+    Pause {
+        id: DownloadID,
+    },
+    Resume {
+        id: DownloadID,
+    },
 }
 
 pub(crate) struct Scheduler {
@@ -53,6 +59,8 @@ pub(crate) struct Scheduler {
     worker_rx: mpsc::Receiver<WorkerMsg>,
 
     jobs: HashMap<DownloadID, Job>,
+    /// Jobs that have been paused and can be resumed later.
+    paused: HashMap<DownloadID, Job>,
     ready: VecDeque<DownloadID>,
     delayed: DelayQueue<DownloadID>,
 }
@@ -76,6 +84,7 @@ impl Scheduler {
             ready: VecDeque::new(),
             delayed: DelayQueue::new(),
             jobs: HashMap::new(),
+            paused: HashMap::new(),
         }
     }
 
@@ -132,6 +141,16 @@ impl Scheduler {
                     warn!(%id, "Job cancelled");
                     job.cancel()
                 }
+                Err(DownloadError::Paused) => {
+                    // Worker indicated a cooperative pause. Move the job to the paused map
+                    // so it can be resumed later without treating it as a failure.
+                    let Some(job) = self.jobs.remove(&id) else {
+                        return;
+                    };
+                    info!(%id, "Job paused by worker");
+                    let paused_job = job.pause();
+                    self.paused.insert(id, paused_job);
+                }
                 Err(error) if error.is_retryable() => {
                     let Some(job) = self.jobs.get_mut(&id) else {
                         return;
@@ -173,6 +192,35 @@ impl Scheduler {
             SchedulerCmd::Cancel { id } => {
                 info!(%id, "Received cancel command");
                 self.jobs.remove(&id).map(|job| job.cancel());
+            }
+            SchedulerCmd::Pause { id } => {
+                info!(%id, "Received pause command");
+                // Move the job into paused state so it can be resumed later.
+                if let Some(job) = self.jobs.remove(&id) {
+                    let paused_job = job.pause();
+                    self.paused.insert(id, paused_job);
+                }
+            }
+            SchedulerCmd::Resume { id } => {
+                info!(%id, "Received resume command");
+                // If we have a paused job for this id, reconstruct a Request with fresh tokens
+                // and re-enqueue it for execution.
+                if let Some(job) = self.paused.remove(&id) {
+                    // Create fresh tokens tied to the manager's root.
+                    let cancel_token = self.ctx.child_token();
+                    let pause_token = self.ctx.child_token();
+
+                    // Rebuild the request with the new tokens and wrap in Arc.
+                    let req = job.request.as_ref().with_tokens(cancel_token, pause_token);
+                    let new_job = Job {
+                        request: Arc::new(req),
+                        attempt: job.attempt,
+                        result: job.result,
+                    };
+
+                    // Schedule the job again (this will emit Queued and push into ready/jobs).
+                    self.schedule(new_job);
+                }
             }
         }
     }
@@ -279,5 +327,16 @@ impl Job {
         self.request.cancel_token.cancel();
         self.request.emit(Event::Cancelled { id: self.id() });
         self.send_result(Err(DownloadError::Cancelled))
+    }
+
+    /// Transition the job into a paused state and return it to the caller for storage.
+    ///
+    /// Note: we intentionally do not send the result here; the job remains resumable and the
+    /// original completion channel (`result`) is preserved so the download handle can continue
+    /// to be fulfilled when the job later completes after a resume.
+    fn pause(self) -> Self {
+        self.request.pause_token.cancel();
+        self.request.emit(Event::Paused { id: self.id() });
+        self
     }
 }
