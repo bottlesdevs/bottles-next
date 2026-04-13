@@ -28,9 +28,10 @@ server:
     cargo run --package bottles-server
 
 update:
-    cd crates/next-core && git pull origin main && cd -
-    cd crates/next-cli && git pull origin main && cd -
-    cd crates/next-docs && git pull origin main && cd -
-    cd crates/next-server && git pull origin main && cd -
-    cd crates/next-winebridge && git pull origin main && cd -
+    cd crates/next-core && git checkout main && git pull origin main && cd -
+    cd crates/next-cli && git checkout main && git pull origin main && cd -
+    cd crates/next-docs && git checkout main && git pull origin main && cd -
+    cd crates/next-server && git checkout main && git pull origin main && cd -
+    cd crates/next-winebridge && git checkout main && git pull origin main && cd -
+    cd crates/download-manager && git checkout main && git pull origin main && cd -
     git commit -am "chore: update submodules"
