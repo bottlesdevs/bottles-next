@@ -16,3 +16,6 @@
 [submodule "crates/next-config"]
 	path = crates/next-config
 	url = https://github.com/bottlesdevs/next-config.git
+[submodule "crates/download-manager"]
+	path = crates/download-manager
+	url = git@github.com:bottlesdevs/download-manager.git
