@@ -160,6 +160,7 @@ dependencies = [
 name = "bottles-core"
 version = "0.1.0"
 dependencies = [
+ "derive_builder",
  "next-config",
  "prost",
  "serde",
