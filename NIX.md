@@ -203,7 +203,7 @@ It is recommended to make Bottles Next use the same Nixpkgs input as the consumi
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     bottles-next = {
       url = "github:bottlesdevs/bottles-next";
@@ -310,7 +310,7 @@ The same works with Home Manager:
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     bottles-next = {
       url = "github:bottlesdevs/bottles-next";
