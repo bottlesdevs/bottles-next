@@ -20,7 +20,7 @@ members = [
     "crates/next-server",
     "crates/next-winebridge",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies]
 bottles-core = { path = "crates/next-core" }
