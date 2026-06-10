@@ -4,28 +4,49 @@ This repository provides a Nix flake for developing, building, running, and inst
 
 The flake currently supports `x86_64-linux`.
 
-This repository uses Git submodules. When fetching the project directly from GitHub or adding it as an input to another flake, enable submodule fetching with `?submodules=1`.
+Bottles Next uses Git submodules for its Cargo workspace crates. The flake enables automatic submodule handling through:
+
+```nix
+inputs.self.submodules = true;
+```
+
+A recent Nix version is therefore required. Nix 2.27 or newer is recommended.
 
 ## Local development
 
-When the repository has already been cloned together with its Git submodules, Nix can use the local source directly.
-
-Clone the repository with submodules:
+Clone the repository:
 
 ```bash
-git clone --recurse-submodules https://github.com/bottlesdevs/bottles-next.git
+git clone https://github.com/bottlesdevs/bottles-next.git
 cd bottles-next
 ```
 
-If the repository was cloned without submodules, initialize them afterward:
+Initialize all Git submodules:
 
 ```bash
 git submodule update --init --recursive
 ```
 
+Alternatively, clone the repository and its submodules in one command:
+
+```bash
+git clone --recurse-submodules \
+  https://github.com/bottlesdevs/bottles-next.git
+
+cd bottles-next
+```
+
+Verify the submodules:
+
+```bash
+git submodule status
+```
+
+A line beginning with `-` means that the corresponding submodule has not been initialized.
+
 ## Development shell
 
-To enter the development shell:
+Enter the development shell:
 
 ```bash
 nix develop
@@ -33,21 +54,21 @@ nix develop
 
 The development shell includes:
 
-* Rust and Cargo
-* rust-analyzer
-* rustfmt and Clippy
-* protobuf and gRPC tools
-* pkg-config
-* CMake and Make
-* OpenSSL
-* the MinGW cross compiler
-* the `x86_64-pc-windows-gnu` Rust target
+- Rust and Cargo
+- rust-analyzer
+- rustfmt and Clippy
+- protobuf and gRPC tools
+- pkg-config
+- CMake and Make
+- OpenSSL
+- the MinGW cross compiler
+- the `x86_64-pc-windows-gnu` Rust target
 
-The shell can build both the native Linux components and the Windows Wine bridge.
+The development shell supports building both the native Linux components and the Windows Wine bridge.
 
 ## Building
 
-To build the complete project as a Nix package:
+Build the complete project as a Nix package:
 
 ```bash
 nix build
@@ -67,13 +88,13 @@ The build output is available through the `result` symlink:
 ls -R result
 ```
 
-The default package can also be built explicitly:
+Build the package explicitly by name:
 
 ```bash
 nix build .#bottles-next
 ```
 
-To show the full build log:
+Show the complete build log:
 
 ```bash
 nix build --print-build-logs
@@ -81,7 +102,7 @@ nix build --print-build-logs
 
 ## Running
 
-To run the default application exposed by the flake:
+Run the default application:
 
 ```bash
 nix run
@@ -89,19 +110,19 @@ nix run
 
 The default application is `bottles-cli`.
 
-It can also be run explicitly:
+Run the CLI explicitly:
 
 ```bash
 nix run .#bottles-cli
 ```
 
-To run the server:
+Run the server:
 
 ```bash
 nix run .#bottles-server
 ```
 
-Arguments can be passed after `--`:
+Pass arguments after `--`:
 
 ```bash
 nix run .#bottles-cli -- --help
@@ -113,13 +134,13 @@ nix run .#bottles-server -- --help
 
 ## Checking the flake
 
-To build and validate all checks exposed by the flake:
+Build and validate all checks exposed by the flake:
 
 ```bash
 nix flake check
 ```
 
-To show full build logs:
+Show complete build logs:
 
 ```bash
 nix flake check --print-build-logs
@@ -127,69 +148,106 @@ nix flake check --print-build-logs
 
 The checks verify that:
 
-* the complete package builds;
-* `bottles-cli` is installed;
-* `bottles-server` is installed;
-* `bottles-winebridge.exe` is installed;
-* the installed files are in the expected locations.
+- the complete package builds;
+- `bottles-cli` is installed;
+- `bottles-server` is installed;
+- `bottles-winebridge.exe` is installed;
+- the installed files use the expected paths.
 
 ## Formatting
 
-To format the Nix files:
+Format the Nix files:
 
 ```bash
 nix fmt
 ```
 
-## Building from GitHub with Nix
+## Building directly from the remote repository
 
-This repository uses Git submodules, so submodule fetching must be enabled in the GitHub flake URL.
+The repository uses Git submodules.
 
-To build directly from GitHub:
+For reliable remote builds, use the generic Git fetcher and enable submodules explicitly:
 
 ```bash
-nix build 'github:bottlesdevs/bottles-next?submodules=1'
+nix build \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1'
 ```
 
-To enter the development shell directly from GitHub:
+Do not use the shorter `github:` reference for remote builds. Depending on the installed Nix version, the GitHub-specific fetcher may return the parent repository without the contents of its submodules.
+
+### Development shell from the remote repository
 
 ```bash
-nix develop 'github:bottlesdevs/bottles-next?submodules=1'
+nix develop \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1'
 ```
 
-To run the default application directly from GitHub:
+### Run the default application from the remote repository
 
 ```bash
-nix run 'github:bottlesdevs/bottles-next?submodules=1'
+nix run \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1'
 ```
 
-To run the CLI explicitly:
+### Run the CLI explicitly
 
 ```bash
-nix run 'github:bottlesdevs/bottles-next?submodules=1#bottles-cli'
+nix run \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1#bottles-cli'
 ```
 
-To run the server:
+### Run the server
 
 ```bash
-nix run 'github:bottlesdevs/bottles-next?submodules=1#bottles-server'
+nix run \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1#bottles-server'
 ```
 
 Arguments can be passed after `--`:
 
 ```bash
-nix run 'github:bottlesdevs/bottles-next?submodules=1#bottles-cli' -- --help
+nix run \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1#bottles-cli' \
+  -- --help
 ```
+
+## Building a specific branch or revision
+
+Build a specific branch:
+
+```bash
+nix build \
+  'git+https://github.com/bottlesdevs/bottles-next.git?ref=main&submodules=1'
+```
+
+Build a fork:
+
+```bash
+nix build \
+  'git+https://github.com/hotplugindev/bottles-next.git?ref=branch-name&submodules=1'
+```
+
+Build an exact commit:
+
+```bash
+nix build \
+  'git+https://github.com/bottlesdevs/bottles-next.git?rev=COMMIT_HASH&submodules=1'
+```
+
+Using an exact commit gives the most predictable remote build.
 
 ## Using the flake in NixOS or Home Manager
 
-Add Bottles Next as an input with Git submodules enabled:
+Add Bottles Next as an explicit Git input with submodules enabled:
 
 ```nix
 {
   inputs = {
-    bottles-next.url =
-      "github:bottlesdevs/bottles-next?submodules=1";
+    bottles-next = {
+      type = "git";
+      url = "https://github.com/bottlesdevs/bottles-next.git";
+      submodules = true;
+    };
   };
 }
 ```
@@ -199,23 +257,30 @@ It is recommended to make Bottles Next use the same Nixpkgs input as the consumi
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     bottles-next = {
-      url = "github:bottlesdevs/bottles-next?submodules=1";
+      type = "git";
+      url = "https://github.com/bottlesdevs/bottles-next.git";
+      submodules = true;
+
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 }
 ```
 
-If using a fork, replace the repository owner:
+When testing a fork or branch:
 
 ```nix
 {
   inputs = {
     bottles-next = {
-      url = "github:hotplugindev/bottles-next?submodules=1";
+      type = "git";
+      url = "https://github.com/hotplugindev/bottles-next.git";
+      ref = "branch-name";
+      submodules = true;
+
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -228,7 +293,7 @@ After adding or changing the input, update the lock file:
 nix flake update bottles-next
 ```
 
-On older Nix versions, use:
+On older Nix versions:
 
 ```bash
 nix flake lock --update-input bottles-next
@@ -248,7 +313,7 @@ Install the package directly from the flake:
 }
 ```
 
-On an explicitly configured `x86_64-linux` system:
+Because Bottles Next currently supports only `x86_64-linux`, it can also be referenced explicitly:
 
 ```nix
 { inputs, ... }:
@@ -274,7 +339,7 @@ Install the package system-wide:
 }
 ```
 
-On an explicitly configured `x86_64-linux` system:
+It can also be referenced explicitly:
 
 ```nix
 { inputs, ... }:
@@ -286,7 +351,7 @@ On an explicitly configured `x86_64-linux` system:
 }
 ```
 
-Rebuild the system after adding the package:
+Rebuild the system:
 
 ```bash
 sudo nixos-rebuild switch --flake .#your-hostname
@@ -302,7 +367,7 @@ sudo nixos-rebuild switch --flake ~/nixos#pc
 
 The flake exposes a default Nixpkgs overlay.
 
-Add the overlay to the consuming configuration:
+Add it to the consuming configuration:
 
 ```nix
 { inputs, ... }:
@@ -314,7 +379,7 @@ Add the overlay to the consuming configuration:
 }
 ```
 
-Bottles Next can then be installed as a normal package from `pkgs`:
+Bottles Next can then be installed through `pkgs`:
 
 ```nix
 { pkgs, ... }:
@@ -338,17 +403,20 @@ The same works with Home Manager:
 }
 ```
 
-Normally, use either the package output directly or the overlay. Using both is unnecessary.
+Use either the package output directly or the overlay. Using both is unnecessary.
 
 ## Complete NixOS example
 
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     bottles-next = {
-      url = "github:bottlesdevs/bottles-next?submodules=1";
+      type = "git";
+      url = "https://github.com/bottlesdevs/bottles-next.git";
+      submodules = true;
+
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -381,10 +449,13 @@ Normally, use either the package output directly or the overlay. Using both is u
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     bottles-next = {
-      url = "github:bottlesdevs/bottles-next?submodules=1";
+      type = "git";
+      url = "https://github.com/bottlesdevs/bottles-next.git";
+      submodules = true;
+
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -401,67 +472,45 @@ Normally, use either the package output directly or the overlay. Using both is u
         system = "x86_64-linux";
 
         modules = [
-          {
-            nixpkgs.overlays = [
-              bottles-next.overlays.default
-            ];
+          (
+            { pkgs, ... }:
+            {
+              nixpkgs.overlays = [
+                bottles-next.overlays.default
+              ];
 
-            environment.systemPackages = [
-              pkgs.bottles-next
-            ];
-          }
+              environment.systemPackages = [
+                pkgs.bottles-next
+              ];
+            }
+          )
         ];
       };
     };
 }
 ```
 
-When writing the module inline as shown above, `pkgs` must be made available through module arguments:
-
-```nix
-{
-  nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
-    system = "x86_64-linux";
-
-    modules = [
-      (
-        { pkgs, ... }:
-        {
-          nixpkgs.overlays = [
-            bottles-next.overlays.default
-          ];
-
-          environment.systemPackages = [
-            pkgs.bottles-next
-          ];
-        }
-      )
-    ];
-  };
-}
-```
-
 ## Updating dependencies
 
-To update all flake inputs:
+Update all flake inputs:
 
 ```bash
 nix flake update
 ```
 
-To update only Nixpkgs:
+Update only Nixpkgs:
 
 ```bash
 nix flake update nixpkgs
 ```
 
-To update only the Rust overlay:
+Update only the Rust overlay:
 
 ```bash
 nix flake update rust-overlay
 ```
 
-After updating inputs, verify that the project still builds:
+After updating inputs, verify the project:
 
 ```bash
 nix flake check --print-build-logs
@@ -471,11 +520,11 @@ nix flake check --print-build-logs
 nix build --print-build-logs
 ```
 
-Changes to `flake.lock` should be reviewed and committed together with the project.
+Review and commit changes to `flake.lock` together with the corresponding project changes.
 
 ## Dirty Git tree warnings
 
-Nix may show a warning such as:
+Nix may show:
 
 ```text
 warning: Git tree is dirty
@@ -485,38 +534,97 @@ This means that the repository contains uncommitted changes.
 
 It does not normally prevent the flake from building.
 
-View the changes with:
+Inspect the changes with:
 
 ```bash
 git status
 ```
 
-Commit or discard the changes before publishing a release so the build refers to a clean repository state.
+Commit or discard the changes before publishing a release so that the release refers to a clean repository state.
 
 ## Troubleshooting submodules
 
-If a local build fails because files from a submodule are missing, initialize the submodules:
+### Local build reports a missing workspace crate
+
+For example:
+
+```text
+failed to read crates/download-manager/Cargo.toml
+No such file or directory
+```
+
+Initialize all submodules:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-If a build from GitHub fails because submodules are missing, confirm that the flake URL contains:
-
-```text
-?submodules=1
-```
-
-For example:
+Verify them:
 
 ```bash
-nix build 'github:bottlesdevs/bottles-next?submodules=1'
+git submodule status
 ```
 
-Do not add this to the Bottles Next flake itself:
+Then retry:
+
+```bash
+nix build
+```
+
+### Remote build reports a missing workspace crate
+
+Use the generic Git fetcher rather than the `github:` shorthand:
+
+```bash
+nix build \
+  'git+https://github.com/bottlesdevs/bottles-next.git?submodules=1'
+```
+
+For a NixOS or Home Manager input, use:
 
 ```nix
-inputs.self.submodules = true;
+bottles-next = {
+  type = "git";
+  url = "https://github.com/bottlesdevs/bottles-next.git";
+  submodules = true;
+};
 ```
 
-Some Nix versions reject that attribute when the flake is fetched through the `github:` scheme. Using `?submodules=1` in the consuming flake URL is more broadly compatible.
+### Nix rejects `inputs.self.submodules`
+
+The flake requires a recent Nix version for automatic local submodule handling.
+
+Check the installed version:
+
+```bash
+nix --version
+```
+
+Nix 2.27 or newer is recommended.
+
+On NixOS, a recent Nix package can be selected with:
+
+```nix
+nix.package = pkgs.nixVersions.latest;
+```
+
+Rebuild the system and verify the version before using the flake.
+
+### A submodule uses an SSH URL
+
+Remote Nix builds should not depend on SSH authentication.
+
+All public submodules should use HTTPS URLs in `.gitmodules`, for example:
+
+```ini
+[submodule "crates/download-manager"]
+    path = crates/download-manager
+    url = https://github.com/bottlesdevs/download-manager.git
+```
+
+After changing a submodule URL:
+
+```bash
+git submodule sync --recursive
+git submodule update --init --recursive
+```
