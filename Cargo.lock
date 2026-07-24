@@ -169,8 +169,7 @@ dependencies = [
  "flate2",
  "fvs-rs",
  "next-config",
- "prost",
- "prost-types",
+ "next-proto",
  "regdiff-rs",
  "serde",
  "serde_json",
@@ -179,8 +178,6 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-health",
- "tonic-prost",
- "tonic-prost-build",
  "tracing",
  "url",
  "uuid",
@@ -201,7 +198,7 @@ dependencies = [
 name = "bottles-winebridge"
 version = "0.1.0"
 dependencies = [
- "bottles-core",
+ "next-proto",
  "tokio",
  "tonic",
  "tonic-health",
@@ -1149,6 +1146,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "next-proto"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-types",
+ "serde",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
 ]
 
 [[package]]

@@ -22,3 +22,6 @@
 [submodule "crates/fvs2-rs"]
 	path = crates/fvs2-rs
 	url = https://github.com/bottlesdevs/fvs2-rs.git
+[submodule "crates/next-proto"]
+	path = crates/next-proto
+	url = https://github.com/bottlesdevs/next-proto.git

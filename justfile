@@ -22,6 +22,7 @@ update:
     cd crates/next-docs && git checkout main && git pull origin main && cd -
     cd crates/next-server && git checkout main && git pull origin main && cd -
     cd crates/next-winebridge && git checkout main && git pull origin main && cd -
+    cd crates/next-proto && git checkout main && git pull origin main && cd -
     cd crates/download-manager && git checkout main && git pull origin main && cd -
     cd crates/fvs2-rs && git checkout main && git pull origin main && cd -
     git commit -am "chore: update submodules"

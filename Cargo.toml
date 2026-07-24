@@ -20,6 +20,15 @@ members = [
     "crates/next-config",
     "crates/next-server",
     "crates/next-winebridge",
+    "crates/next-proto",
+]
+default-members = [
+    "crates/download-manager",
+    "crates/fvs2-rs",
+    "crates/next-cli",
+    "crates/next-core",
+    "crates/next-config",
+    "crates/next-proto",
 ]
 resolver = "3"
 
@@ -28,6 +37,7 @@ async-trait = "0.1"
 bottles-core = { path = "crates/next-core" }
 fvs-rs = { path = "crates/fvs2-rs" }
 next-config = { path = "crates/next-config" }
+next-proto = { path = "crates/next-proto" }
 serde = { version = "1.0", features = ["derive"] }
 serde-value = "0.7"
 serde_json = "1.0"
