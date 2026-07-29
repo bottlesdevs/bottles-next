@@ -18,7 +18,6 @@ members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
-    "crates/next-server",
     "crates/next-winebridge",
     "crates/next-proto",
 ]
@@ -33,7 +32,11 @@ default-members = [
 resolver = "3"
 
 [workspace.dependencies]
+async-fs = "2.2"
+async-io = "2.6"
+async-process = "2.5"
 async-trait = "0.1"
+blocking = "1.6"
 bottles-core = { path = "crates/next-core" }
 fvs-rs = { path = "crates/fvs2-rs" }
 next-config = { path = "crates/next-config" }
@@ -50,12 +53,13 @@ prost-types = "0.14"
 tonic-prost = "0.14"
 tonic-health = "0.14"
 tonic-prost-build = "0.14"
-tokio = { version = "1.48", features = ["full"] }
-tokio-stream = { version = "0.1", features = ["full"] }
-tokio-util = { version = "0.7", features = ["full"] }
+tokio = "1.48"
+tokio-stream = "0.1"
+tokio-util = "0.7"
 reqwest = { version = "0.12", features = ["stream"] }
 anyhow = "1.0"
 futures-core = "0.3"
+futures-lite = "2.6"
 futures-util = "0.3"
 derive_builder = "0.20"
 inventory = "0.3"
