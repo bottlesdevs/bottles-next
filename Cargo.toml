@@ -15,6 +15,7 @@ readme = "README.md"
 members = [
     "crates/download-manager",
     "crates/fvs2-rs",
+    "crates/http-client",
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
@@ -24,6 +25,7 @@ members = [
 default-members = [
     "crates/download-manager",
     "crates/fvs2-rs",
+    "crates/http-client",
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
@@ -33,17 +35,23 @@ resolver = "3"
 
 [workspace.dependencies]
 async-fs = "2.2"
+async-broadcast = "0.7"
+async-channel = "2.5"
+async-compression = { version = "0.4", default-features = false, features = ["futures-io", "gzip"] }
+async-executor = "1.13"
 async-io = "2.6"
 async-process = "2.5"
 async-trait = "0.1"
 blocking = "1.6"
 bottles-core = { path = "crates/next-core" }
+download-manager = { path = "crates/download-manager" }
 fvs-rs = { path = "crates/fvs2-rs" }
 next-config = { path = "crates/next-config" }
 next-proto = { path = "crates/next-proto" }
 serde = { version = "1.0", features = ["derive"] }
 serde-value = "0.7"
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt"]}
@@ -61,11 +69,12 @@ anyhow = "1.0"
 futures-core = "0.3"
 futures-lite = "2.6"
 futures-util = "0.3"
+http = "1"
+http-client = { path = "crates/http-client", default-features = false }
 derive_builder = "0.20"
 inventory = "0.3"
 uuid = { version = "1", features = ["v4"] }
 url = "2"
 directories = "6.0"
-flate2 = "1"
-tar = { version = "0.4", default-features = false }
+smol-tar = "0.1"
 regdiff-rs = { git = "https://github.com/bottlesdevs/regdiff-rs", rev = "3266ab15abca4ef470b1ec5797cfeaa24e003510" }

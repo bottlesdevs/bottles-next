@@ -25,3 +25,6 @@
 [submodule "crates/next-proto"]
 	path = crates/next-proto
 	url = https://github.com/bottlesdevs/next-proto.git
+[submodule "crates/http-client"]
+	path = crates/http-client
+	url = https://github.com/bottlesdevs/http-client.git
