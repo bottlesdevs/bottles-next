@@ -19,6 +19,7 @@ members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
+    "crates/next-ui",
     "crates/next-winebridge",
     "crates/next-proto",
 ]
@@ -28,6 +29,7 @@ default-members = [
     "crates/http-client",
     "crates/next-cli",
     "crates/next-core",
+    "crates/next-ui",
     "crates/next-config",
     "crates/next-proto",
 ]

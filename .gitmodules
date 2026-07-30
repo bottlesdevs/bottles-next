@@ -28,3 +28,6 @@
 [submodule "crates/http-client"]
 	path = crates/http-client
 	url = https://github.com/bottlesdevs/http-client.git
+[submodule "crates/next-ui"]
+	path = crates/next-ui
+	url = https://github.com/bottlesdevs/next-ui.git
