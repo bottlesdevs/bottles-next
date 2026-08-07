@@ -26,8 +26,7 @@ update:
     cd crates/download-manager && git checkout main && git pull origin main && cd -
     cd crates/fvs2-rs && git checkout main && git pull origin main && cd -
 
-# Rewrites all submodule remotes from HTTPS to SSH.
+# Points each submodule's local origin remote at SSH instead of HTTPS.
 submodules-ssh:
-    sed -i -E 's#https://github\.com/(bottlesdevs)/([^ "]+?)(\.git)?$#git@github.com:\1/\2.git#' .gitmodules
-    git submodule sync --recursive
+    git submodule foreach 'url=$(git remote get-url origin); case "$url" in https://github.com/bottlesdevs/*) new_url=$(echo "$url" | sed -E "s#https://github\.com/(bottlesdevs)/([^ \"]+?)(\.git)?\$#git@github.com:\1/\2.git#"); git remote set-url origin "$new_url" ;; esac'
     git submodule foreach 'git remote -v'
