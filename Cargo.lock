@@ -1196,7 +1196,6 @@ version = "0.1.0"
 dependencies = [
  "async-broadcast",
  "async-channel",
- "async-executor",
  "async-fs",
  "async-io",
  "derive_builder",
