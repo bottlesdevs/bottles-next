@@ -1,0 +1,139 @@
+name: WineBridge Release
+
+# Pushing a `winebridge-v*` tag cross-compiles bottles-winebridge.exe for
+# x86_64-pc-windows-gnu, packages it exactly as next-deps-srv expects (a flat
+# .tar with the exe at its root, so no `component_root` is needed on
+# submission), and attaches the tar plus its sha256 to a GitHub Release.
+#
+# This lives in the workspace root, not in the next-winebridge submodule's own
+# repo: crates/next-winebridge/Cargo.toml inherits edition/version/etc. from
+# this workspace's [workspace.package], so it cannot be built (or even have
+# its manifest parsed) without this repo's root Cargo.toml present. Checking
+# out next-winebridge alone, as the first version of this workflow did, fails
+# with "failed to find a workspace root".
+on:
+  push:
+    tags:
+      - "winebridge-v*"
+  pull_request:
+    paths:
+      # A submodule bump changes only the gitlink itself (no trailing path),
+      # so both forms are needed: the bare path catches a bump, the glob
+      # would catch an in-place edit if this ever stops being a submodule.
+      - "crates/next-winebridge"
+      - "crates/next-winebridge/**"
+      - ".github/workflows/winebridge-release.yml"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Cross-compiled Windows test binaries can't execute on the packaging
+  # runner (ubuntu-latest), so correctness is checked natively on Windows
+  # here, separate from packaging.
+  test:
+    name: Test (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo test --package bottles-winebridge
+
+  build:
+    name: Build (x86_64-pc-windows-gnu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install mingw-w64
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --package bottles-winebridge --target x86_64-pc-windows-gnu
+
+      - name: Package
+        id: package
+        run: |
+          set -euo pipefail
+          bin=target/x86_64-pc-windows-gnu/release/bottles-winebridge.exe
+          tar -C "$(dirname "$bin")" -cJf bottles-winebridge.tar.xz bottles-winebridge.exe
+          sha256sum bottles-winebridge.tar.xz | tee bottles-winebridge.tar.xz.sha256
+          echo "sha256=$(cut -d' ' -f1 bottles-winebridge.tar.xz.sha256)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bottles-winebridge
+          path: |
+            bottles-winebridge.tar.xz
+            bottles-winebridge.tar.xz.sha256
+          if-no-files-found: error
+
+      - name: Job summary
+        run: |
+          {
+            echo "### bottles-winebridge.tar.xz"
+            echo "\`\`\`"
+            echo "sha256: ${{ steps.package.outputs.sha256 }}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Publish release
+    needs: [test, build]
+    if: startsWith(github.ref, 'refs/tags/winebridge-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: bottles-winebridge
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bottles-winebridge.tar.xz
+            bottles-winebridge.tar.xz.sha256
+          generate_release_notes: true
+
+      - name: Print next-deps-srv submission
+        run: |
+          version="${GITHUB_REF_NAME#winebridge-v}"
+          sum="$(cut -d' ' -f1 bottles-winebridge.tar.xz.sha256)"
+          {
+            echo "### Submit to next-deps-srv"
+            echo "\`\`\`json"
+            printf '{\n'
+            printf '  "kind": "component", "name": "WineBridge", "version": "%s",\n' "$version"
+            printf '  "slot": "winebridge", "category": "bridge", "description": "WineBridge %s", "license": "GPL-3.0",\n' "$version"
+            printf '  "artifacts": [{\n'
+            printf '    "url": "https://github.com/%s/releases/download/%s/bottles-winebridge.tar.xz",\n' "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
+            printf '    "file_name": "bottles-winebridge.tar.xz",\n'
+            printf '    "checksum": {"algorithm": "sha256", "value": "%s"}\n' "$sum"
+            printf '  }]\n'
+            printf '}\n'
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

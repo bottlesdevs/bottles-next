@@ -21,6 +21,7 @@ members = [
     "crates/next-config",
     "crates/next-ui",
     "crates/next-proto",
+    "crates/next-winebridge"
 ]
 default-members = [
     "crates/download-manager",
@@ -28,9 +29,10 @@ default-members = [
     "crates/http-client",
     "crates/next-cli",
     "crates/next-core",
-    "crates/next-ui",
     "crates/next-config",
+    "crates/next-ui",
     "crates/next-proto",
+    "crates/next-winebridge"
 ]
 resolver = "3"
 
@@ -38,7 +40,7 @@ resolver = "3"
 async-fs = "2.2"
 async-broadcast = "0.7"
 async-channel = "2.5"
-async-compression = { version = "0.4", default-features = false, features = ["futures-io", "gzip"] }
+async-compression = { version = "0.4", default-features = false, features = ["futures-io", "gzip", "xz"] }
 async-executor = "1.13"
 async-io = "2.6"
 async-process = "2.5"
