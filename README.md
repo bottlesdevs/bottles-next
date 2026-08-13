@@ -15,10 +15,5 @@ To build the project, you can use the `just` command:
 just build
 ```
 
-# macOS
-Runner choice on macOS is constrained by a Wine limitation that affects
-WineBridge. See [MACOS.md](MACOS.md), and `just macos-e2e` to verify a working
-setup end to end.
-
 # License
 GPL-3.0
