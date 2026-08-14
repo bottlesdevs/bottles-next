@@ -15,5 +15,7 @@ To build the project, you can use the `just` command:
 just build
 ```
 
+More recipes can be found in the `justfile`.
+
 # License
 GPL-3.0

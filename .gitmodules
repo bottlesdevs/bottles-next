@@ -1,24 +1,24 @@
 [submodule "next-server"]
 	path = crates/next-server
-	url = https://github.com/bottlesdevs/next-server
+	url = https://github.com/bottlesdevs/next-server.git
 [submodule "next-cli"]
 	path = crates/next-cli
-	url = https://github.com/bottlesdevs/next-cli
+	url = https://github.com/bottlesdevs/next-cli.git
 [submodule "next-winebridge"]
 	path = crates/next-winebridge
-	url = https://github.com/bottlesdevs/next-winebridge
+	url = https://github.com/bottlesdevs/next-winebridge.git
 [submodule "next-core"]
 	path = crates/next-core
-	url = https://github.com/bottlesdevs/next-core
+	url = https://github.com/bottlesdevs/next-core.git
 [submodule "next-docs"]
 	path = crates/next-docs
-	url = https://github.com/bottlesdevs/next-docs
+	url = https://github.com/bottlesdevs/next-docs.git
 [submodule "crates/next-config"]
 	path = crates/next-config
 	url = https://github.com/bottlesdevs/next-config.git
 [submodule "crates/download-manager"]
 	path = crates/download-manager
-  url = https://github.com/bottlesdevs/download-manager.git
+  url = https://github.com/bottlesdevs/next-download-manager.git
 [submodule "crates/fvs2-rs"]
 	path = crates/fvs2-rs
 	url = https://github.com/bottlesdevs/fvs2-rs.git
@@ -31,6 +31,3 @@
 [submodule "crates/next-ui"]
 	path = crates/next-ui
 	url = https://github.com/bottlesdevs/next-ui.git
-[submodule "catalog/next-deps-srv"]
-	path = catalog/next-deps-srv
-	url = git@github.com:bottlesdevs/next-deps-srv.git

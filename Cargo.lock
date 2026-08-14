@@ -552,7 +552,6 @@ dependencies = [
 name = "bottles-winebridge"
 version = "0.1.0"
 dependencies = [
- "futures-core",
  "next-proto",
  "tokio",
  "tonic",
