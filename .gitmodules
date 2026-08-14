@@ -18,7 +18,7 @@
 	url = https://github.com/bottlesdevs/next-config.git
 [submodule "crates/download-manager"]
 	path = crates/download-manager
-  url = https://github.com/bottlesdevs/next-download-manager.git
+  	url = https://github.com/bottlesdevs/download-manager.git
 [submodule "crates/fvs2-rs"]
 	path = crates/fvs2-rs
 	url = https://github.com/bottlesdevs/fvs2-rs.git
