@@ -30,3 +30,15 @@ update:
 doc package:
     cargo doc --no-deps --package {{package}}
     open target/doc/{{replace(package, "-", "_")}}/index.html
+
+# Runs the Registry, every storefront plugin, and the gRPC server together.
+# The Registry must be up before anything else dials it, so it starts
+# first with a short head start. Ctrl+C stops everything.
+serve:
+    cargo build --package next-plugin-registry --package bottles-server --package next-plugin-egs --package next-plugin-gog
+    cargo run --package next-plugin-registry &
+    sleep 1
+    cargo run --package next-plugin-egs &
+    cargo run --package next-plugin-gog &
+    cargo run --package bottles-server &
+    wait
