@@ -576,12 +576,14 @@ dependencies = [
  "blocking",
  "directories",
  "download-manager",
+ "egs-api",
  "futures-core",
  "futures-lite",
  "futures-util",
  "fvs-rs",
  "http",
  "http-client",
+ "keyring",
  "next-config",
  "next-proto",
  "regdiff-rs",
@@ -600,6 +602,22 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "bottles-server"
+version = "0.1.0"
+dependencies = [
+ "bottles-core",
+ "futures-core",
+ "next-proto",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-health",
+ "tonic-reflection",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3432,27 +3450,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.108",
-]
-
-[[package]]
-name = "next-profiles"
-version = "0.1.0"
-dependencies = [
- "egs-api",
- "futures-core",
- "keyring",
- "next-proto",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
- "tokio-stream",
- "tonic",
- "tonic-health",
- "tonic-reflection",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

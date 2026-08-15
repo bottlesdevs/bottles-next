@@ -19,10 +19,10 @@ members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
+    "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
-    "crates/next-profiles",
 ]
 default-members = [
     "crates/download-manager",
@@ -31,10 +31,10 @@ default-members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
+    "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
-    "crates/next-profiles",
 ]
 resolver = "3"
 
@@ -63,11 +63,14 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt"]}
 tonic = "0.14"
+egs-api = "0.14.0"
+keyring = "4.1.6"
 prost = "0.14"
 prost-types = "0.14"
 tonic-prost = "0.14"
 tonic-health = "0.14"
 tonic-prost-build = "0.14"
+tonic-reflection = "0.14.6"
 tokio = "1.48"
 tokio-stream = "0.1"
 tokio-util = "0.7"

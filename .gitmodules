@@ -31,6 +31,3 @@
 [submodule "crates/next-ui"]
 	path = crates/next-ui
 	url = https://github.com/bottlesdevs/next-ui.git
-[submodule "crates/next-profiles"]
-	path = crates/next-profiles
-	url = https://github.com/bottlesdevs/next-profiles.git
