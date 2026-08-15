@@ -37,3 +37,6 @@
 [submodule "crates/next-plugin-registry"]
 	path = crates/next-plugin-registry
 	url = https://github.com/edfloreshz/next-plugin-registry.git
+[submodule "crates/next-plugin-gog"]
+	path = crates/next-plugin-gog
+	url = https://github.com/edfloreshz/next-plugin-gog
