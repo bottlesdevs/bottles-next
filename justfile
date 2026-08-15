@@ -25,3 +25,8 @@ update:
     cd crates/next-proto && git checkout main && git pull origin main && cd -
     cd crates/download-manager && git checkout main && git pull origin main && cd -
     cd crates/fvs2-rs && git checkout main && git pull origin main && cd -
+
+# Builds and opens documentation for a specific package.
+doc package:
+    cargo doc --no-deps --package {{package}}
+    open target/doc/{{replace(package, "-", "_")}}/index.html

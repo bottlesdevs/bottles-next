@@ -21,7 +21,8 @@ members = [
     "crates/next-config",
     "crates/next-ui",
     "crates/next-proto",
-    "crates/next-winebridge"
+    "crates/next-winebridge",
+    "crates/next-profiles",
 ]
 default-members = [
     "crates/download-manager",
@@ -32,7 +33,8 @@ default-members = [
     "crates/next-config",
     "crates/next-ui",
     "crates/next-proto",
-    "crates/next-winebridge"
+    "crates/next-winebridge",
+    "crates/next-profiles",
 ]
 resolver = "3"
 
@@ -70,7 +72,6 @@ tokio = "1.48"
 tokio-stream = "0.1"
 tokio-util = "0.7"
 reqwest = { version = "0.12", features = ["stream"] }
-anyhow = "1.0"
 futures-core = "0.3"
 futures-lite = "2.6"
 futures-util = "0.3"
