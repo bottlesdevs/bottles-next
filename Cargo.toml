@@ -23,6 +23,8 @@ members = [
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
+    "crates/next-plugin-egs",
+    "crates/next-plugin-registry",
 ]
 default-members = [
     "crates/download-manager",
@@ -35,6 +37,8 @@ default-members = [
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
+    "crates/next-plugin-egs",
+    "crates/next-plugin-registry",
 ]
 resolver = "3"
 

@@ -609,8 +609,11 @@ name = "bottles-server"
 version = "0.1.0"
 dependencies = [
  "bottles-core",
+ "egs-api",
  "futures-core",
  "next-proto",
+ "serde_json",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -3450,6 +3453,40 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.108",
+]
+
+[[package]]
+name = "next-plugin-egs"
+version = "0.1.0"
+dependencies = [
+ "bottles-core",
+ "egs-api",
+ "futures-core",
+ "next-proto",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-health",
+ "tonic-reflection",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "next-plugin-registry"
+version = "0.1.0"
+dependencies = [
+ "next-proto",
+ "tokio",
+ "tonic",
+ "tonic-health",
+ "tonic-reflection",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
