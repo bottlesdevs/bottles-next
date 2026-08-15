@@ -36,7 +36,7 @@
 	url = https://github.com/bottlesdevs/next-plugin-egs
 [submodule "crates/next-plugin-registry"]
 	path = crates/next-plugin-registry
-	url = https://github.com/edfloreshz/next-plugin-registry.git
+	url = https://github.com/bottlesdevs/next-plugin-registry
 [submodule "crates/next-plugin-gog"]
 	path = crates/next-plugin-gog
-	url = https://github.com/edfloreshz/next-plugin-gog
+	url = https://github.com/bottlesdevs/next-plugin-gog
