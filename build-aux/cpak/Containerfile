@@ -1,0 +1,58 @@
+FROM ghcr.io/containerpak/sdk-rust:main AS rust-builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        libssl-dev \
+        protobuf-compiler && \
+    cpak-clean-junk
+
+WORKDIR /source
+COPY . .
+
+ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+ENV CARGO_PROFILE_RELEASE_LTO=thin
+ENV CARGO_PROFILE_RELEASE_STRIP=symbols
+
+RUN cargo build \
+        --locked \
+        --release \
+        --package bottles-cli \
+        --package next-ui && \
+    install -Dm0755 target/release/bottles-cli /stage/usr/libexec/bottles-next/bottles-cli && \
+    install -Dm0755 target/release/next-ui /stage/usr/bin/bottles-next
+
+FROM golang:1.25-bookworm AS fvs2d-builder
+
+WORKDIR /source
+COPY crates/fvs2-rs/upstream .
+
+RUN CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w" \
+        -o /tmp/fvs2d \
+        ./cmd/fvs2d && \
+    install -Dm0755 /tmp/fvs2d /stage/usr/libexec/bottles-next/fvs2d
+
+FROM ghcr.io/containerpak/wine:main
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        fuse3 \
+        liblzma5 \
+        libssl3t64 \
+        libzstd1 \
+        zlib1g && \
+    cpak-clean-junk
+
+COPY --from=rust-builder /stage/ /
+COPY --from=fvs2d-builder /stage/ /
+COPY --chmod=0755 build-aux/cpak/bottles-next-cli /usr/bin/bottles-next-cli
+COPY build-aux/cpak/com.usebottles.bottles-next.desktop /usr/share/applications/com.usebottles.bottles-next.desktop
+COPY crates/next-ui/assets/icons/bottles-symbolic.svg /usr/share/icons/hicolor/scalable/apps/com.usebottles.bottles-next.svg
+
+LABEL org.opencontainers.image.source="https://github.com/bottlesdevs/bottles-next"

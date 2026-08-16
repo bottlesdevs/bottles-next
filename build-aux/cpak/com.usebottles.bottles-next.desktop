@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Bottles Next
+Comment=Run Windows software on Linux
+Exec=bottles-next
+Icon=com.usebottles.bottles-next
+Terminal=false
+Type=Application
+Categories=Utility;Game;
+Keywords=wine;windows;
+StartupNotify=true

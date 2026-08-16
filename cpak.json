@@ -1,0 +1,59 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Containerpak/cpak/v2/schema/manifest-v2.json",
+  "manifest_version": "2.0",
+  "name": "Bottles Next",
+  "description": "The next generation of Bottles for running Windows software on Linux.",
+  "version": "0.1.0",
+  "image": "ghcr.io/bottlesdevs/bottles-next:main",
+  "image_ref": "source",
+  "binaries": [
+    "/usr/bin/bottles-next",
+    "/usr/bin/bottles-next-cli"
+  ],
+  "desktop_entries": [
+    "/usr/share/applications/com.usebottles.bottles-next.desktop"
+  ],
+  "dependencies": [],
+  "addons": [],
+  "idle_time": 0,
+  "override": {
+    "socketX11": true,
+    "socketWayland": true,
+    "socketPulseAudio": true,
+    "socketSessionBus": true,
+    "socketSystemBus": false,
+    "socketSshAgent": false,
+    "socketCups": false,
+    "socketGpgAgent": false,
+    "socketAtSpiBus": true,
+    "socketBluetooth": false,
+    "deviceDri": true,
+    "deviceKvm": false,
+    "deviceShm": true,
+    "deviceAlsa": false,
+    "deviceVideo": false,
+    "deviceFuse": true,
+    "deviceTun": false,
+    "deviceUsb": false,
+    "deviceInput": true,
+    "deviceTTY": false,
+    "deviceAll": false,
+    "notification": true,
+    "openURI": true,
+    "filesystem": [
+      {"path": "home", "access": "read-write"}
+    ],
+    "env": [
+      "LANG=C.UTF-8",
+      "LC_ALL=C.UTF-8"
+    ],
+    "network": true,
+    "process": false,
+    "userNamespaces": false,
+    "memoryMaxMB": 0,
+    "cpuQuota": 0,
+    "pidsMax": 0,
+    "asRoot": false,
+    "allowedHostCommands": []
+  }
+}

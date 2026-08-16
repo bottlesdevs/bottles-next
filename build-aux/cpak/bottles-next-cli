@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec /usr/libexec/bottles-next/bottles-cli \
+    --fvs2d /usr/libexec/bottles-next/fvs2d \
+    "$@"
