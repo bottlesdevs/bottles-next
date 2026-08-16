@@ -50,16 +50,16 @@ clippy:
 update:
     cd crates/download-manager && git checkout main && git pull origin main && cd -
     cd crates/fvs2-rs && git checkout main && git pull origin main && cd -
-    cd crates/bottles-cli && git checkout main && git pull origin main && cd -
-    cd crates/bottles-core && git checkout main && git pull origin main && cd -
-    cd crates/bottles-server && git checkout main && git pull origin main && cd -
+    cd crates/next-cli && git checkout main && git pull origin main && cd -
+    cd crates/next-core && git checkout main && git pull origin main && cd -
+    cd crates/next-server && git checkout main && git pull origin main && cd -
     cd crates/next-plugin-registry && git checkout main && git pull origin main && cd -
     cd crates/next-plugin-egs && git checkout main && git pull origin main && cd -
     cd crates/next-plugin-gog && git checkout main && git pull origin main && cd -
     cd crates/next-proto && git checkout main && git pull origin main && cd -
     cd crates/next-config && git checkout main && git pull origin main && cd -
     cd crates/next-ui && git checkout main && git pull origin main && cd -
-    cd crates/bottles-winebridge && git checkout main && git pull origin main && cd -
+    cd crates/next-winebridge && git checkout main && git pull origin main && cd -
 
 # Builds and opens documentation for a specific package.
 doc package:
