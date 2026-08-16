@@ -629,8 +629,11 @@ dependencies = [
  "http 1.3.1",
  "http-client",
  "keyring",
+ "keyvalues-parser",
  "next-config",
  "next-proto",
+ "notify",
+ "prost-wkt-types",
  "regdiff-rs",
  "semver",
  "serde",
@@ -655,8 +658,10 @@ version = "0.1.0"
 dependencies = [
  "bottles-core",
  "directories",
+ "download-manager",
  "egs-api",
  "futures-core",
+ "http-client",
  "keyvalues-parser",
  "next-config",
  "next-proto",
@@ -672,6 +677,7 @@ dependencies = [
  "tonic-reflection",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 
@@ -3845,9 +3851,13 @@ name = "next-plugin-gog"
 version = "0.1.0"
 dependencies = [
  "bottles-core",
+ "chrono",
  "futures-core",
  "gog",
  "next-proto",
+ "prost-wkt-types",
+ "reqwest 0.12.24",
+ "serde",
  "serde_json",
  "tokio",
  "tokio-stream",
@@ -5321,6 +5331,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "h2 0.4.12",

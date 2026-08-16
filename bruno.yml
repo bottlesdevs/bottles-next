@@ -1,0 +1,370 @@
+opencollection: 1.0.0
+info:
+  name: Bottles Next
+config:
+  protobuf:
+    protoFiles:
+      - type: file
+        path: ../crates/next-proto/proto/bottles/common/v1/common.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/library/v1/library.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/profiles/v1/profiles.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/registry/v1/registry.proto
+    importPaths:
+      - path: ../crates/next-proto/proto
+  environments:
+    - name: Local
+      variables:
+        - name: server_url
+          value: localhost:50052
+        - name: registry_url
+          value: localhost:50250
+items:
+  - info:
+      name: Library
+      type: folder
+    items:
+      - info:
+          name: ListGames
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.library.v1.Library/ListGames
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefronts": []
+            }
+      - info:
+          name: WatchGames
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.library.v1.Library/WatchGames
+          methodType: server-streaming
+          message: |-
+            {
+              "profile_id": "",
+              "storefronts": []
+            }
+  - info:
+      name: Profile
+      type: folder
+    items:
+      - info:
+          name: ActivateProfile
+          type: grpc
+          seq: 7
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/ActivateProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "only": []
+            }
+      - info:
+          name: CreateProfile
+          type: grpc
+          seq: 3
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/CreateProfile
+          methodType: unary
+          message: |-
+            {
+              "name": "",
+              "icon": ""
+            }
+      - info:
+          name: DeleteProfile
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/DeleteProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": ""
+            }
+      - info:
+          name: GetActiveProfile
+          type: grpc
+          seq: 6
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/GetActiveProfile
+          methodType: unary
+          message: '{}'
+      - info:
+          name: GetProfile
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/GetProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": ""
+            }
+      - info:
+          name: LinkAccount
+          type: grpc
+          seq: 9
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/LinkAccount
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "challenge_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES",
+              "user_input": ""
+            }
+      - info:
+          name: LinkSteamAccount
+          type: grpc
+          seq: 10
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/LinkSteamAccount
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "steam_id64": "",
+              "auto_activate": false
+            }
+      - info:
+          name: ListProfiles
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/ListProfiles
+          methodType: unary
+          message: '{}'
+      - info:
+          name: RenameProfile
+          type: grpc
+          seq: 5
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/RenameProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "name": ""
+            }
+      - info:
+          name: UnlinkAccount
+          type: grpc
+          seq: 8
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/UnlinkAccount
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+      - info:
+          name: UnlinkSteamAccount
+          type: grpc
+          seq: 11
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/UnlinkSteamAccount
+          methodType: unary
+          message: |-
+            {
+              "profile_id": ""
+            }
+      - info:
+          name: WatchActiveProfile
+          type: grpc
+          seq: 12
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/WatchActiveProfile
+          methodType: server-streaming
+          message: ''
+      - info:
+          name: WatchSteamSessions
+          type: grpc
+          seq: 13
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/WatchSteamSessions
+          methodType: server-streaming
+          message: ''
+  - info:
+      name: Store
+      type: folder
+    items:
+      - info:
+          name: BeginLogin
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/BeginLogin
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+      - info:
+          name: CompleteLogin
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/CompleteLogin
+          methodType: unary
+          message: |-
+            {
+              "challenge_id": "",
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES",
+              "user_input": ""
+            }
+      - info:
+          name: ListGames
+          type: grpc
+          seq: 5
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/ListGames
+          methodType: unary
+          message: |-
+            {
+              "profile_id": ""
+            }
+      - info:
+          name: RefreshSession
+          type: grpc
+          seq: 3
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/RefreshSession
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+      - info:
+          name: RevokeSession
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/RevokeSession
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+      - info:
+          name: WatchGames
+          type: grpc
+          seq: 6
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/WatchGames
+          methodType: server-streaming
+          message: |-
+            {
+              "profile_id": ""
+            }
+  - info:
+      name: Registry
+      type: folder
+    items:
+      - info:
+          name: DeregisterPlugin
+          type: grpc
+          seq: 3
+        grpc:
+          url: '{{registry_url}}'
+          method: /bottles.registry.v1.Registry/DeregisterPlugin
+          methodType: unary
+          message: |-
+            {
+              "registration_token": ""
+            }
+      - info:
+          name: Heartbeat
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{registry_url}}'
+          method: /bottles.registry.v1.Registry/Heartbeat
+          methodType: unary
+          message: |-
+            {
+              "registration_token": ""
+            }
+      - info:
+          name: ListPlugins
+          type: grpc
+          seq: 5
+        grpc:
+          url: '{{registry_url}}'
+          method: /bottles.registry.v1.Registry/ListPlugins
+          methodType: unary
+          message: ''
+      - info:
+          name: RegisterPlugin
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{registry_url}}'
+          method: /bottles.registry.v1.Registry/RegisterPlugin
+          methodType: unary
+          message: |-
+            {
+              "storefront": "STOREFRONT_EPIC_GAMES",
+              "endpoint": "http://127.0.0.1:PORT",
+              "plugin_version": "0.1.0"
+            }
+      - info:
+          name: ResolvePlugin
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{registry_url}}'
+          method: /bottles.registry.v1.Registry/ResolvePlugin
+          methodType: unary
+          message: |-
+            {
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+request:
+  variables:
+    - name: server_url
+      value: localhost:50052
+    - name: registry_url
+      value: localhost:50250
+bundled: true
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
+    exportedAt: '2026-08-16T04:59:12.263Z'
+    exportedUsing: Bruno

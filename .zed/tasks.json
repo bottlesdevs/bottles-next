@@ -1,0 +1,34 @@
+// Zed tasks for `just dev`-style workflow: each entry opens its own terminal
+// tab so the Registry, EGS plugin, GOG plugin, and gRPC server can run side
+// by side. Open the task picker (cmd-shift-p -> "task: spawn") and select
+// all four, or bind a keymap that runs them in sequence.
+[
+  {
+    "label": "dev: registry",
+    "command": "cargo run --package next-plugin-registry",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always"
+  },
+  {
+    "label": "dev: egs",
+    "command": "cargo run --package next-plugin-egs",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always"
+  },
+  {
+    "label": "dev: gog",
+    "command": "cargo run --package next-plugin-gog",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always"
+  },
+  {
+    "label": "dev: server",
+    "command": "cargo run --package bottles-server",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always"
+  }
+]

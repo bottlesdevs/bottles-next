@@ -55,6 +55,7 @@ async-process = "2.5"
 async-trait = "0.1"
 blocking = "1.6"
 bottles-core = { path = "crates/next-core" }
+chrono = "0.4"
 download-manager = { path = "crates/download-manager" }
 fvs-rs = { path = "crates/fvs2-rs" }
 next-config = { path = "crates/next-config" }
