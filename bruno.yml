@@ -12,6 +12,10 @@ config:
         path: ../crates/next-proto/proto/bottles/profiles/v1/profiles.proto
       - type: file
         path: ../crates/next-proto/proto/bottles/registry/v1/registry.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/store/v1/store.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/bottle/v1/bottle.proto
     importPaths:
       - path: ../crates/next-proto/proto
   environments:
@@ -51,6 +55,51 @@ items:
             {
               "profile_id": "",
               "storefronts": []
+            }
+      - info:
+          name: InstallGame
+          type: grpc
+          seq: 3
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.library.v1.Library/InstallGame
+          methodType: server-streaming
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_GOG",
+              "game_id": "",
+              "bottle_id": ""
+            }
+      - info:
+          name: CancelInstall
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.library.v1.Library/CancelInstall
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_GOG",
+              "game_id": "",
+              "bottle_id": ""
+            }
+      - info:
+          name: UninstallGame
+          type: grpc
+          seq: 5
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.library.v1.Library/UninstallGame
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_GOG",
+              "game_id": "",
+              "bottle_id": ""
             }
   - info:
       name: Profile
@@ -290,6 +339,269 @@ items:
           message: |-
             {
               "profile_id": ""
+            }
+      - info:
+          name: GetInstallManifest
+          type: grpc
+          seq: 7
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.store.v1.Store/GetInstallManifest
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "game_id": ""
+            }
+  - info:
+      name: Bottle
+      type: folder
+    items:
+      - info:
+          name: CreateBottle
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/CreateBottle
+          methodType: server-streaming
+          message: |-
+            {
+              "name": "",
+              "runner_component_id": ""
+            }
+      - info:
+          name: DeleteBottle
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/DeleteBottle
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: GetBottle
+          type: grpc
+          seq: 3
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/GetBottle
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: ListBottles
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/ListBottles
+          methodType: unary
+          message: '{}'
+      - info:
+          name: WatchBottles
+          type: grpc
+          seq: 5
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/WatchBottles
+          methodType: server-streaming
+          message: '{}'
+      - info:
+          name: WatchBottle
+          type: grpc
+          seq: 6
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/WatchBottle
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: EditBottle
+          type: grpc
+          seq: 7
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/EditBottle
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": "",
+              "operations": []
+            }
+      - info:
+          name: SetComponent
+          type: grpc
+          seq: 8
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/SetComponent
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": "",
+              "component_id": ""
+            }
+      - info:
+          name: RemoveComponent
+          type: grpc
+          seq: 9
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/RemoveComponent
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": "",
+              "slot": "SLOT_RUNNER"
+            }
+      - info:
+          name: InstallDependency
+          type: grpc
+          seq: 10
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/InstallDependency
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": "",
+              "dependency_id": ""
+            }
+      - info:
+          name: RunProgram
+          type: grpc
+          seq: 11
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/RunProgram
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": "",
+              "program_id": ""
+            }
+      - info:
+          name: ListProcesses
+          type: grpc
+          seq: 12
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/ListProcesses
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: KillProcess
+          type: grpc
+          seq: 13
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/KillProcess
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": "",
+              "program_id": ""
+            }
+      - info:
+          name: StopBottle
+          type: grpc
+          seq: 14
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/StopBottle
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: ListDllOverrides
+          type: grpc
+          seq: 15
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/ListDllOverrides
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: SetDllOverride
+          type: grpc
+          seq: 16
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/SetDllOverride
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": "",
+              "dll": "",
+              "mode": "NATIVE_BUILTIN"
+            }
+      - info:
+          name: UnsetDllOverride
+          type: grpc
+          seq: 17
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/UnsetDllOverride
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": "",
+              "dll": ""
+            }
+      - info:
+          name: CreateSnapshot
+          type: grpc
+          seq: 18
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/CreateSnapshot
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": "",
+              "message": ""
+            }
+      - info:
+          name: ListSnapshots
+          type: grpc
+          seq: 19
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/ListSnapshots
+          methodType: unary
+          message: |-
+            {
+              "bottle_id": ""
+            }
+      - info:
+          name: Rollback
+          type: grpc
+          seq: 20
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.bottle.v1.Bottle/Rollback
+          methodType: server-streaming
+          message: |-
+            {
+              "bottle_id": "",
+              "state_id_or_prefix": ""
             }
   - info:
       name: Registry
