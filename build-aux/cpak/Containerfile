@@ -5,6 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
+        libprotobuf-dev \
         libssl-dev \
         protobuf-compiler && \
     cpak-clean-junk
