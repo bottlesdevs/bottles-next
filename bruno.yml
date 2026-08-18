@@ -13,7 +13,11 @@ config:
       - type: file
         path: ../crates/next-proto/proto/bottles/registry/v1/registry.proto
       - type: file
-        path: ../crates/next-proto/proto/bottles/store/v1/store.proto
+        path: ../crates/next-proto/proto/bottles/plugin/v1/plugin.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/accounts/v1/accounts.proto
+      - type: file
+        path: ../crates/next-proto/proto/bottles/steam/v1/steam.proto
       - type: file
         path: ../crates/next-proto/proto/bottles/bottle/v1/bottle.proto
     importPaths:
@@ -40,8 +44,7 @@ items:
           methodType: unary
           message: |-
             {
-              "profile_id": "",
-              "storefronts": []
+              "profile_id": ""
             }
       - info:
           name: WatchGames
@@ -53,8 +56,7 @@ items:
           methodType: server-streaming
           message: |-
             {
-              "profile_id": "",
-              "storefronts": []
+              "profile_id": ""
             }
       - info:
           name: InstallGame
@@ -115,8 +117,7 @@ items:
           methodType: unary
           message: |-
             {
-              "profile_id": "",
-              "only": []
+              "profile_id": ""
             }
       - info:
           name: CreateProfile
@@ -165,35 +166,6 @@ items:
               "profile_id": ""
             }
       - info:
-          name: LinkAccount
-          type: grpc
-          seq: 9
-        grpc:
-          url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/LinkAccount
-          methodType: unary
-          message: |-
-            {
-              "profile_id": "",
-              "challenge_id": "",
-              "storefront": "STOREFRONT_EPIC_GAMES",
-              "user_input": ""
-            }
-      - info:
-          name: LinkSteamAccount
-          type: grpc
-          seq: 10
-        grpc:
-          url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/LinkSteamAccount
-          methodType: unary
-          message: |-
-            {
-              "profile_id": "",
-              "steam_id64": "",
-              "auto_activate": false
-            }
-      - info:
           name: ListProfiles
           type: grpc
           seq: 1
@@ -216,12 +188,55 @@ items:
               "name": ""
             }
       - info:
-          name: UnlinkAccount
+          name: UpdateProfile
           type: grpc
           seq: 8
         grpc:
           url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/UnlinkAccount
+          method: /bottles.profiles.v1.Profile/UpdateProfile
+          methodType: unary
+          message: |-
+            {
+              "id": "",
+              "name": "",
+              "icon": "",
+              "accounts": []
+            }
+      - info:
+          name: WatchActiveProfile
+          type: grpc
+          seq: 9
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.profiles.v1.Profile/WatchActiveProfile
+          methodType: server-streaming
+          message: ''
+  - info:
+      name: Accounts
+      type: folder
+    items:
+      - info:
+          name: LinkProfile
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.accounts.v1.Accounts/LinkProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "challenge_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES",
+              "user_input": ""
+            }
+      - info:
+          name: RefreshAccount
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.accounts.v1.Accounts/RefreshAccount
           methodType: unary
           message: |-
             {
@@ -229,37 +244,72 @@ items:
               "storefront": "STOREFRONT_EPIC_GAMES"
             }
       - info:
-          name: UnlinkSteamAccount
+          name: UnlinkProfile
           type: grpc
-          seq: 11
+          seq: 3
         grpc:
           url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/UnlinkSteamAccount
+          method: /bottles.accounts.v1.Accounts/UnlinkProfile
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "storefront": "STOREFRONT_EPIC_GAMES"
+            }
+      - info:
+          name: ActivateAccounts
+          type: grpc
+          seq: 4
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.accounts.v1.Accounts/ActivateAccounts
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "only": []
+            }
+  - info:
+      name: Steam
+      type: folder
+    items:
+      - info:
+          name: LinkSteamAccount
+          type: grpc
+          seq: 1
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.steam.v1.Steam/LinkSteamAccount
+          methodType: unary
+          message: |-
+            {
+              "profile_id": "",
+              "steam_id64": "",
+              "auto_activate": false
+            }
+      - info:
+          name: UnlinkSteamAccount
+          type: grpc
+          seq: 2
+        grpc:
+          url: '{{server_url}}'
+          method: /bottles.steam.v1.Steam/UnlinkSteamAccount
           methodType: unary
           message: |-
             {
               "profile_id": ""
             }
       - info:
-          name: WatchActiveProfile
-          type: grpc
-          seq: 12
-        grpc:
-          url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/WatchActiveProfile
-          methodType: server-streaming
-          message: ''
-      - info:
           name: WatchSteamSessions
           type: grpc
-          seq: 13
+          seq: 3
         grpc:
           url: '{{server_url}}'
-          method: /bottles.profiles.v1.Profile/WatchSteamSessions
+          method: /bottles.steam.v1.Steam/WatchSteamSessions
           methodType: server-streaming
           message: ''
   - info:
-      name: Store
+      name: Plugin
       type: folder
     items:
       - info:
@@ -268,7 +318,7 @@ items:
           seq: 1
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/BeginLogin
+          method: /bottles.plugin.v1.Plugin/BeginLogin
           methodType: unary
           message: |-
             {
@@ -281,7 +331,7 @@ items:
           seq: 2
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/CompleteLogin
+          method: /bottles.plugin.v1.Plugin/CompleteLogin
           methodType: unary
           message: |-
             {
@@ -296,7 +346,7 @@ items:
           seq: 5
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/ListGames
+          method: /bottles.plugin.v1.Plugin/ListGames
           methodType: unary
           message: |-
             {
@@ -308,7 +358,7 @@ items:
           seq: 3
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/RefreshSession
+          method: /bottles.plugin.v1.Plugin/RefreshSession
           methodType: unary
           message: |-
             {
@@ -321,7 +371,7 @@ items:
           seq: 4
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/RevokeSession
+          method: /bottles.plugin.v1.Plugin/RevokeSession
           methodType: unary
           message: |-
             {
@@ -334,7 +384,7 @@ items:
           seq: 6
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/WatchGames
+          method: /bottles.plugin.v1.Plugin/WatchGames
           methodType: server-streaming
           message: |-
             {
@@ -346,7 +396,7 @@ items:
           seq: 7
         grpc:
           url: '{{server_url}}'
-          method: /bottles.store.v1.Store/GetInstallManifest
+          method: /bottles.plugin.v1.Plugin/GetInstallManifest
           methodType: unary
           message: |-
             {
