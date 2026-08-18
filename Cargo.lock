@@ -622,6 +622,7 @@ dependencies = [
  "directories",
  "download-manager",
  "egs-api",
+ "flate2",
  "futures-core",
  "futures-lite",
  "futures-util",
