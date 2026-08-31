@@ -19,13 +19,12 @@ members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
-    "crates/next-server",
+    # "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
-    "crates/next-plugin-egs",
-    "crates/next-plugin-gog",
-    "crates/next-plugin-registry",
+    "crates/next-plugin-host",
+    "crates/next-plugin-api",
 ]
 default-members = [
     "crates/download-manager",
@@ -34,13 +33,12 @@ default-members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
-    "crates/next-server",
+    # "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
     "crates/next-winebridge",
-    "crates/next-plugin-egs",
-    "crates/next-plugin-gog",
-    "crates/next-plugin-registry",
+    "crates/next-plugin-host",
+    "crates/next-plugin-api",
 ]
 resolver = "3"
 
@@ -54,7 +52,9 @@ async-io = "2.6"
 async-process = "2.5"
 async-trait = "0.1"
 blocking = "1.6"
-bottles-core = { path = "crates/next-core" }
+bottles-core = { path = "crates/next-core", default-features = false }
+bottles-plugin-host = { path = "crates/next-plugin-host" }
+bottles-plugin-api = { path = "crates/next-plugin-api" }
 chrono = "0.4"
 download-manager = { path = "crates/download-manager" }
 fvs-rs = { path = "crates/fvs2-rs" }
@@ -70,10 +70,8 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt"]}
 tonic = "0.14"
-egs-api = "0.14.0"
-gog = "0.5.0"
-flate2 = "1"
-keyring-lib = "1.0.3"
+keyring = "4.1.6"
+keyring-core = "1.0"
 prost = "0.14"
 prost-types = "0.14"
 tonic-prost = "0.14"

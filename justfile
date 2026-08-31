@@ -5,10 +5,9 @@ build *args:
     cargo build {{args}} --package fvs-rs
     cargo build {{args}} --package bottles-cli
     cargo build {{args}} --package bottles-core
-    cargo build {{args}} --package bottles-server
-    cargo build {{args}} --package next-plugin-registry
-    cargo build {{args}} --package next-plugin-egs
-    cargo build {{args}} --package next-plugin-gog
+    # cargo build {{args}} --package bottles-server
+    cargo build {{args}} --package bottles-plugin-host
+    cargo build {{args}} --package bottles-plugin-api
     cargo build {{args}} --package next-proto
     cargo build {{args}} --package next-config
     cargo build {{args}} --package next-ui
@@ -21,10 +20,9 @@ check:
     cargo check --package fvs-rs
     cargo check --package bottles-cli
     cargo check --package bottles-core
-    cargo check --package bottles-server
-    cargo check --package next-plugin-registry
-    cargo check --package next-plugin-egs
-    cargo check --package next-plugin-gog
+    # cargo check --package bottles-server
+    cargo check --package bottles-plugin-host
+    cargo check --package bottles-plugin-api
     cargo check --package next-proto
     cargo check --package next-config
     cargo check --package next-ui
@@ -37,10 +35,9 @@ clippy:
     cargo clippy --package fvs-rs
     cargo clippy --package bottles-cli
     cargo clippy --package bottles-core
-    cargo clippy --package bottles-server
-    cargo clippy --package next-plugin-registry
-    cargo clippy --package next-plugin-egs
-    cargo clippy --package next-plugin-gog
+    # cargo clippy --package bottles-server
+    cargo clippy --package bottles-plugin-host
+    cargo clippy --package bottles-plugin-api
     cargo clippy --package next-proto
     cargo clippy --package next-config
     cargo clippy --package next-ui
@@ -52,10 +49,9 @@ update:
     cd crates/fvs2-rs && git checkout main && git pull origin main && cd -
     cd crates/next-cli && git checkout main && git pull origin main && cd -
     cd crates/next-core && git checkout main && git pull origin main && cd -
-    cd crates/next-server && git checkout main && git pull origin main && cd -
-    cd crates/next-plugin-registry && git checkout main && git pull origin main && cd -
-    cd crates/next-plugin-egs && git checkout main && git pull origin main && cd -
-    cd crates/next-plugin-gog && git checkout main && git pull origin main && cd -
+    # cd crates/next-server && git checkout main && git pull origin main && cd -
+    cd crates/next-plugin-host && git checkout main && git pull origin main && cd -
+    cd crates/next-plugin-api && git checkout main && git pull origin main && cd -
     cd crates/next-proto && git checkout main && git pull origin main && cd -
     cd crates/next-config && git checkout main && git pull origin main && cd -
     cd crates/next-ui && git checkout main && git pull origin main && cd -
@@ -69,11 +65,6 @@ doc package:
 # Runs the Registry, every storefront plugin, and the gRPC server together.
 # The Registry must be up before anything else dials it, so it starts
 # first with a short head start. Ctrl+C stops everything.
-serve:
-    cargo build --package next-plugin-registry --package bottles-server --package next-plugin-egs --package next-plugin-gog
-    cargo run --package next-plugin-registry &
-    sleep 1
-    cargo run --package next-plugin-egs &
-    cargo run --package next-plugin-gog &
-    cargo run --package bottles-server &
-    wait
+# serve:
+#     cargo run --package bottles-server &
+#     wait

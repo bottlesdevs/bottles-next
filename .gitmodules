@@ -31,12 +31,9 @@
 [submodule "crates/next-ui"]
 	path = crates/next-ui
 	url = https://github.com/bottlesdevs/next-ui.git
-[submodule "crates/next-plugin-egs"]
-	path = crates/next-plugin-egs
-	url = https://github.com/bottlesdevs/next-plugin-egs
-[submodule "crates/next-plugin-registry"]
-	path = crates/next-plugin-registry
-	url = https://github.com/bottlesdevs/next-plugin-registry
-[submodule "crates/next-plugin-gog"]
-	path = crates/next-plugin-gog
-	url = https://github.com/bottlesdevs/next-plugin-gog
+[submodule "crates/next-plugin-host"]
+	path = crates/next-plugin-host
+	url = https://github.com/bottlesdevs/next-plugin-host.git
+[submodule "crates/next-plugin-api"]
+	path = crates/next-plugin-api
+	url = https://github.com/bottlesdevs/next-plugin-api.git
