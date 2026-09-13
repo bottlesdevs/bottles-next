@@ -50,7 +50,7 @@ Also, starting from the 10th Sep 2026, the following commit pattern must be used
 feat: add support for X
 
 Assisted-by: <tool>:<model-version>
-AI scope: what the AI generated in this commit, and the prompt used (or a short summary of it)
+AI-Scope: what the AI generated in this commit, and the prompt used (or a short summary of it)
 ```
 
 Trivial completions (single lines, renames, formatting) don't need to be marked.
@@ -60,3 +60,6 @@ Not following this layout will lead to a closed Pull Request.
 # License
 
 GPL-3.0
+
+Coding agents must also follow [AGENTS.md](AGENTS.md) before changing files,
+creating commits, or opening pull requests.
