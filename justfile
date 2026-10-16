@@ -13,6 +13,14 @@ build *args:
     cargo build {{args}} --package next-ui
     cargo build {{args}} --package bottles-winebridge --target x86_64-pc-windows-gnu
 
+# Builds fvs2d (Go 1.25+) into cargo's bin directory, putting it on PATH.
+fvs2d:
+    cd crates/fvs2-rs/upstream && go build -o "${CARGO_HOME:-$HOME/.cargo}/bin/fvs2d" ./cmd/fvs2d
+
+# Runs the desktop UI. fvs2d must be on PATH; see `just fvs2d`.
+run *args:
+    cargo run --package next-ui {{args}}
+
 # Runs cargo check on all packages.
 check:
     cargo check --package download-manager
