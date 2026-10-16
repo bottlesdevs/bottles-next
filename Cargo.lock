@@ -3548,6 +3548,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bottles-core",
+ "bottles-plugin-host",
  "directories",
  "futures-lite",
  "iced",
