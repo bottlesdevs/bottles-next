@@ -37,3 +37,6 @@
 [submodule "crates/next-plugin-api"]
 	path = crates/next-plugin-api
 	url = https://github.com/bottlesdevs/next-plugin-api.git
+[submodule "crates/next-paths"]
+	path = crates/next-paths
+	url = https://github.com/bottlesdevs/next-paths.git

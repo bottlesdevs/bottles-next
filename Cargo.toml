@@ -19,6 +19,7 @@ members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
+    "crates/next-paths",
     # "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
@@ -33,6 +34,7 @@ default-members = [
     "crates/next-cli",
     "crates/next-core",
     "crates/next-config",
+    "crates/next-paths",
     # "crates/next-server",
     "crates/next-ui",
     "crates/next-proto",
@@ -59,6 +61,7 @@ chrono = "0.4"
 download-manager = { path = "crates/download-manager" }
 fvs-rs = { path = "crates/fvs2-rs" }
 next-config = { path = "crates/next-config" }
+next-paths = { path = "crates/next-paths" }
 next-proto = { path = "crates/next-proto" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde-value = "0.7"
@@ -88,6 +91,7 @@ futures-util = "0.3"
 http = "1"
 http-client = { path = "crates/http-client", default-features = false }
 derive_builder = "0.20"
+derive_more = "2"
 inventory = "0.3"
 uuid = { version = "1", features = ["v4"] }
 url = "2"

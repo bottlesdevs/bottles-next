@@ -1,6 +1,10 @@
 FROM ghcr.io/containerpak/sdk-rust:main AS rust-builder
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG RUST_VERSION=1.99.1
+
+RUN rustup toolchain install "${RUST_VERSION}" --profile minimal && \
+    rustup default "${RUST_VERSION}"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -13,11 +17,13 @@ RUN apt-get update && \
 WORKDIR /source
 COPY . .
 
-ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+ENV CARGO_BUILD_JOBS=2
+ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
 ENV CARGO_PROFILE_RELEASE_LTO=thin
 ENV CARGO_PROFILE_RELEASE_STRIP=symbols
 
-RUN cargo build \
+RUN cargo test --locked --release --package bottles-core --package next-ui --lib && \
+    cargo build \
         --locked \
         --release \
         --package bottles-cli \
@@ -52,6 +58,7 @@ RUN apt-get update && \
 
 COPY --from=rust-builder /stage/ /
 COPY --from=fvs2d-builder /stage/ /
+RUN ln -s /usr/libexec/bottles-next/fvs2d /usr/bin/fvs2d
 COPY --chmod=0755 build-aux/cpak/bottles-next-cli /usr/bin/bottles-next-cli
 COPY build-aux/cpak/com.usebottles.bottles-next.desktop /usr/share/applications/com.usebottles.bottles-next.desktop
 COPY crates/next-ui/assets/icons/bottles-symbolic.svg /usr/share/icons/hicolor/scalable/apps/com.usebottles.bottles-next.svg

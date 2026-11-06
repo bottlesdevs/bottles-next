@@ -9,6 +9,7 @@ build *args:
     cargo build {{args}} --package bottles-plugin-host
     cargo build {{args}} --package bottles-plugin-api
     cargo build {{args}} --package next-proto
+    cargo build {{args}} --package next-paths
     cargo build {{args}} --package next-config
     cargo build {{args}} --package next-ui
     cargo build {{args}} --package bottles-winebridge --target x86_64-pc-windows-gnu
@@ -24,6 +25,7 @@ check:
     cargo check --package bottles-plugin-host
     cargo check --package bottles-plugin-api
     cargo check --package next-proto
+    cargo check --package next-paths
     cargo check --package next-config
     cargo check --package next-ui
     cargo check --package bottles-winebridge --target x86_64-pc-windows-gnu
@@ -39,6 +41,7 @@ clippy:
     cargo clippy --package bottles-plugin-host
     cargo clippy --package bottles-plugin-api
     cargo clippy --package next-proto
+    cargo clippy --package next-paths
     cargo clippy --package next-config
     cargo clippy --package next-ui
     cargo clippy --package bottles-winebridge --target x86_64-pc-windows-gnu
@@ -53,6 +56,7 @@ update:
     cd crates/next-plugin-host && git checkout main && git pull origin main && cd -
     cd crates/next-plugin-api && git checkout main && git pull origin main && cd -
     cd crates/next-proto && git checkout main && git pull origin main && cd -
+    cd crates/next-paths && git checkout main && git pull origin main && cd -
     cd crates/next-config && git checkout main && git pull origin main && cd -
     cd crates/next-ui && git checkout main && git pull origin main && cd -
     cd crates/next-winebridge && git checkout main && git pull origin main && cd -
