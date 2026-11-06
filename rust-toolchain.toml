@@ -1,0 +1,6 @@
+# rustup installs these automatically on the first cargo invocation, so
+# `just build` can cross-compile WineBridge without a manual `rustup target add`.
+[toolchain]
+channel = "stable"
+components = ["clippy", "rustfmt"]
+targets = ["x86_64-pc-windows-gnu"]
