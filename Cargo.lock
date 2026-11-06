@@ -612,9 +612,9 @@ name = "bottles-plugin-host"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bottles-core",
  "futures",
  "heck",
+ "next-paths",
  "serde",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
@@ -3512,6 +3512,7 @@ dependencies = [
  "iced",
  "keyvalues-parser",
  "next-config",
+ "next-paths",
  "rust-embed",
  "serde",
  "tokio-util",

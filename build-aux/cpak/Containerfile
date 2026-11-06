@@ -22,7 +22,7 @@ ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
 ENV CARGO_PROFILE_RELEASE_LTO=thin
 ENV CARGO_PROFILE_RELEASE_STRIP=symbols
 
-RUN cargo test --locked --release --package bottles-core --package next-ui --lib && \
+RUN cargo test --locked --release --package bottles-core --package bottles-plugin-host --package bottles-cli --package next-ui --all-targets && \
     cargo build \
         --locked \
         --release \
