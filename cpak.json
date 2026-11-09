@@ -4,7 +4,7 @@
   "name": "Bottles Next",
   "description": "The next generation of Bottles for running Windows software on Linux.",
   "version": "0.1.0",
-  "image": "ghcr.io/bottlesdevs/bottles-next@sha256:c4dbe735c280ff5d6fd1d3acc38bd1f15dc50e072f95da90bebfd9db83abf98c",
+  "image": "ghcr.io/bottlesdevs/bottles-next@sha256:3be13dfdf9128a54af8d7ad62bb6a70b412d83799b7e11c9330dbfdd8bb5da7b",
   "binaries": [
     "/usr/bin/bottles-next",
     "/usr/bin/bottles-next-cli"
