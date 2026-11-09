@@ -56,7 +56,6 @@ async-trait = "0.1"
 blocking = "1.6"
 bottles-core = { path = "crates/next-core", default-features = false }
 bottles-plugin-host = { path = "crates/next-plugin-host" }
-bottles-plugin-api = { path = "crates/next-plugin-api" }
 chrono = "0.4"
 download-manager = { path = "crates/download-manager" }
 fvs-rs = { path = "crates/fvs2-rs" }
@@ -91,7 +90,7 @@ futures-util = "0.3"
 http = "1"
 http-client = { path = "crates/http-client", default-features = false }
 derive_builder = "0.20"
-derive_more = "2"
+derive_more = "2.1"
 inventory = "0.3"
 uuid = { version = "1", features = ["v4"] }
 url = "2"
